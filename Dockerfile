@@ -3,7 +3,7 @@ LABEL authors="katagiri"
 
 WORKDIR /backend
 
-COPY . .
+COPY backend/cmd/service .
 
 RUN go mod download
 
