@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -14,8 +15,8 @@ func (s *Storage) Close() {
 	s.db.Close()
 }
 
-func NewStorage(connection string) (*Storage, error) {
-	pool, err := pgxpool.New(context.Background(), connection)
+func NewStorage() (*Storage, error) {
+	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 
 	if err != nil {
 		return nil, err

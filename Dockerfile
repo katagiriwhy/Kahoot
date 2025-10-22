@@ -9,7 +9,7 @@ RUN go mod download
 
 RUN go mod tidy
 
-RUN go build -o application ./cmd/service/main.go
+RUN go build -o app ./cmd/service/main.go
 
 EXPOSE 8080
 

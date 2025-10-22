@@ -2,17 +2,18 @@ package controllers
 
 import (
 	"backend/backend/internal/types"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/mod/sumdb/storage"
 	"net/http"
 )
 
 type UserController struct {
-	db *storage.Storage
+	db *pgxpool.Pool
 }
 
-func NewUserController(db *storage.Storage) *UserController {
+func NewUserController(db *pgxpool.Pool) *UserController {
 	return &UserController{db}
 }
 
@@ -38,9 +39,8 @@ func (con *UserController) Register(c *gin.Context) {
 	const query = `INSERT INTO users (username, login, password) VALUES ($1, $2, $3)`
 
 	user := types.User{UserName: body.UserName, Login: body.Login, Password: string(hash)}
-	// TODO: finish token
 
-	_, err = con.db.Q
+	err = con.db.QueryRow(c, query, user).Scan(&user.ID)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create user: " + err.Error()})
@@ -48,20 +48,20 @@ func (con *UserController) Register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"email": user.Email,
+		"respond": fmt.Sprintf("User %s succesfully created", user.UserName),
 	})
 }
 
 func (con *UserController) Delete(c *gin.Context) {
 	var body struct {
-		Email string `json:"email" binding:"required"`
+		Login string `json:"login" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read body: " + err.Error()})
 		return
 	}
 
-	err := con.db.DeleteUserByEmail(c, body.Email)
+	_, err := con.db.Exec(c, "DELETE FROM users WHERE login = $1", body.Login)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to delete user: " + err.Error()})
@@ -69,14 +69,14 @@ func (con *UserController) Delete(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Пользователь: " + body.Email + " успешно удален",
+		"message": "Пользователь: " + body.Login + " успешно удален",
 	})
 
 }
 
 func (con *UserController) Login(c *gin.Context) {
 	var body struct {
-		Email    string `json:"email" binding:"required"`
+		Login    string `json:"login" binding:"required"`
 		Password string `json:"password" binding:"required"`
 	}
 
@@ -85,14 +85,18 @@ func (con *UserController) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := con.db.GetByEmail(c, body.Email)
+	const query = `SELECT password, username FROM users WHERE login = $1`
+
+	var hash, username string
+
+	err := con.db.QueryRow(c, query, body.Login).Scan(&hash, &username)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to find user: " + err.Error()})
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword(user.PassHash, []byte(body.Password))
+	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(body.Password))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Password is incorrect: " + err.Error()})
@@ -100,6 +104,6 @@ func (con *UserController) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Welcome " + user.Email,
+		"message": "Welcome " + username,
 	})
 }
