@@ -1,4 +1,14 @@
 services:
+  app:
+    container_name: go_application
+    build: .
+    environment:
+      DATABASE_URL: "postgres://postgres:postgres@go_db:5432/postgres?sslmode=disable"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - go_db
+
   db:
     container_name: postgres_container
     image: postgres:17.6
@@ -10,13 +20,14 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=en_US.utf8 --lc-ctype=en_US.utf8"
     ports:
       - "5432:5432"
-    #volumes:
-      #- ./init.sql:/docker-entrypoint-initdb.d/01-init.sql
-      # - postgres_data:/var/lib/postgresql/data
+    volumes:
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data: {}
 
 networks:
   default:
     driver: bridge
 
-volumes:
-  postgres_data:
