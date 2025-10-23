@@ -1,3 +1,5 @@
+CREATE TYPE quiz_difficulty AS ENUM ('Легкий', 'Средний', 'Сложный');
+
 CREATE TABLE IF NOT EXISTS public.users (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     username VARCHAR(30) NOT NULL UNIQUE,
@@ -13,6 +15,8 @@ CREATE TABLE IF NOT EXISTS public.quizzes (
   is_public BOOLEAN DEFAULT TRUE,
   creator_id  BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   image_data BYTEA,
+  difficulty quiz_difficulty DEFAULT 'Легкий',
+  question_amount INTEGER DEFAULT 0,
   title VARCHAR(255) NOT NULL,
   time_limit INTEGER DEFAULT 15,
   description TEXT,
