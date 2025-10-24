@@ -27,6 +27,6 @@ type Quiz struct {
 	TimeLimit      int            `json:"time_limit" db:"time_limit"`
 	QuizDiff       QuizDifficulty `json:"difficulty" db:"difficulty"`
 	Title          string         `json:"title" db:"title"`
-	ImageData      []byte         `json:"image_data,omitempty" db:"image_data"`
+	Image          []byte         `json:"image,omitempty" db:"image"`
 	CreatedAt      time.Time      `json:"created_at" db:"created_at"`
 }

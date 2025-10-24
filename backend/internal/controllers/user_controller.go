@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"backend/backend/internal/types"
 	"fmt"
 	"net/http"
 
@@ -37,11 +36,11 @@ func (con *UserController) Register(c *gin.Context) {
 		return
 	}
 
-	const query = `INSERT INTO users (username, login, password) VALUES ($1, $2, $3)`
+	var id int
 
-	user := types.User{UserName: body.UserName, Login: body.Login, Password: string(hash)}
+	const query = `INSERT INTO users (username, login, password) VALUES ($1, $2, $3) RETURNING id`
 
-	err = con.db.QueryRow(c, query, user).Scan(&user.ID)
+	err = con.db.QueryRow(c, query, body.UserName, body.Login, string(hash)).Scan(&id)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create user: " + err.Error()})
@@ -49,7 +48,7 @@ func (con *UserController) Register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"respond": fmt.Sprintf("User %s succesfully created", user.UserName),
+		"respond": fmt.Sprintf("User %s succesfully created", body.UserName),
 	})
 }
 
@@ -100,7 +99,7 @@ func (con *UserController) Login(c *gin.Context) {
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(body.Password))
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Password is incorrect: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Password is incorrect!"})
 		return
 	}
 

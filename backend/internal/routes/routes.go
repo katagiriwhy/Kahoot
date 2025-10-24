@@ -2,6 +2,7 @@ package routes
 
 import (
 	"backend/backend/internal/controllers"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,13 +20,15 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
-func NewRoutes(con *controllers.UserController) *gin.Engine {
+func NewRoutes(con *controllers.Controllers) *gin.Engine {
 	router := gin.Default()
 	router.Use(corsMiddleware())
 
-	router.POST("/login", con.Login)
-	router.POST("/register", con.Register)
-	router.DELETE("/delete", con.Delete)
+	router.POST("/login", con.UserController.Login)
+	router.POST("/register", con.UserController.Register)
+	router.DELETE("/delete", con.UserController.Delete)
+	router.GET("/quizzes", con.QuizController.GetQuizzes)
+	router.POST("quiz", con.QuizController.CreateQuiz)
 
 	return router
 }

@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"backend/backend/internal/application"
+)
 
 func main() {
-	fmt.Println("Let's begin")
+	a := application.NewApplication()
+
+	a.Run()
 }
