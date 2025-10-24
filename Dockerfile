@@ -1,4 +1,4 @@
-FROM golang:1.24.9
+FROM golang:1.25.2
 LABEL authors="katagiri"
 
 WORKDIR /backend

@@ -10,6 +10,14 @@ const (
 	Hard    QuizDifficulty = "Сложный"
 )
 
+func (qd QuizDifficulty) IsValid() bool {
+	switch qd {
+	case Easy, Average, Hard:
+		return true
+	}
+	return false
+}
+
 type Quiz struct {
 	ID             int            `json:"id" db:"id"`
 	IsPublic       bool           `json:"is_public" db:"is_public"`

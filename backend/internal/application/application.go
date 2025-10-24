@@ -3,8 +3,9 @@ package application
 import (
 	"backend/backend/internal/controllers"
 	"backend/backend/internal/database"
-	"github.com/gin-gonic/gin"
 	"os"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Application struct {

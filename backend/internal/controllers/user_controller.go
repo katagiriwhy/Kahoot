@@ -3,10 +3,11 @@ package controllers
 import (
 	"backend/backend/internal/types"
 	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
-	"net/http"
 )
 
 type UserController struct {
