@@ -3,6 +3,7 @@ package controllers
 import (
 	"backend/backend/internal/types"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,54 @@ func NewQuestionsController(db *pgxpool.Pool) *QuestionsController {
 	return &QuestionsController{
 		db: db,
 	}
+}
+
+type QuestionResponse struct {
+	ID           int    `json:"id"`
+	QuestionText string `json:"question_text"`
+	Points       int    `json:"points"`
+}
+
+func (q *QuestionsController) Get(c *gin.Context) {
+	quizID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	const query = `SELECT id, question_text, points FROM questions WHERE quiz_id = $1`
+
+	var questions []QuestionResponse
+
+	rows, err := q.db.Query(c.Request.Context(), query, quizID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var question QuestionResponse
+		err = rows.Scan(&question.ID, &question.QuestionText, &question.Points)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		questions = append(questions, question)
+	}
+
+	if err = rows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(questions) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no questions found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, questions)
 }
 
 func (q *QuestionsController) Create(c *gin.Context) {

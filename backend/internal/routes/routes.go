@@ -24,13 +24,25 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 	router := gin.Default()
 	router.Use(corsMiddleware())
 
-	router.POST("/login", con.UserController.Login)
-	router.POST("/register", con.UserController.Register)
-	router.DELETE("/delete", con.UserController.Delete)
-	router.GET("/quizzes", con.QuizController.GetQuizzes)
-	router.GET("/quizzes/:id/image", con.QuizController.GetQuizImage)
-	router.POST("/quiz", con.QuizController.Create)
-	router.POST("/question", con.QuestionController.Create)
+	users := router.Group("/users")
+	{
+		users.POST("/login", con.UserController.Login)
+		users.POST("/register", con.UserController.Register)
+		users.DELETE("/delete", con.UserController.Delete)
+	}
+
+	quizzes := router.Group("/quizzes")
+	{
+		quizzes.GET("", con.QuizController.GetQuizzes)
+		quizzes.POST("", con.QuizController.Create)
+		quizzes.GET("/:id/image", con.QuizController.GetQuizImage)
+		quizzes.GET("/:id/questions", con.QuestionController.Get)
+	}
+
+	questions := router.Group("/questions")
+	{
+		questions.POST("", con.QuestionController.Create)
+	}
 
 	return router
 }

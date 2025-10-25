@@ -1,6 +1,6 @@
 #!/bin/bash
 
-docker compose down -v
+docker compose down
 
 docker compose build
 
