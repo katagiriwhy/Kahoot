@@ -1,6 +1,7 @@
 package controllers
 
 type Controllers struct {
-	UserController *UserController
-	QuizController *QuizController
+	UserController     *UserController
+	QuizController     *QuizController
+	QuestionController *QuestionsController
 }

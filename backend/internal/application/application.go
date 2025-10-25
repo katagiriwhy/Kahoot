@@ -48,9 +48,11 @@ func initControllers(p *pgxpool.Pool) *controllers.Controllers {
 
 	userCon := controllers.NewUserController(p)
 	quizCon := controllers.NewQuizController(p)
+	questionCon := controllers.NewQuestionsController(p)
 
 	return &controllers.Controllers{
-		UserController: userCon,
-		QuizController: quizCon,
+		UserController:     userCon,
+		QuizController:     quizCon,
+		QuestionController: questionCon,
 	}
 }

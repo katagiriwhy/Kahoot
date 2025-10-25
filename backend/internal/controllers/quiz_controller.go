@@ -127,7 +127,7 @@ func (q *QuizController) GetQuizzes(c *gin.Context) {
 	c.JSON(http.StatusOK, quizzes)
 }
 
-func (q *QuizController) CreateQuiz(c *gin.Context) {
+func (q *QuizController) Create(c *gin.Context) {
 
 	isPublic := c.PostForm("is_public") == "true"
 	creatorId := c.PostForm("creator_id")
@@ -166,8 +166,16 @@ func (q *QuizController) CreateQuiz(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid creator_id"})
 		return
 	}
-	questionAmountInt, _ := strconv.Atoi(questionAmount)
-	timeLimitInt, _ := strconv.Atoi(timeLimit)
+	questionAmountInt, err := strconv.Atoi(questionAmount)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid question_amount"})
+		return
+	}
+	timeLimitInt, err := strconv.Atoi(timeLimit)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid time_limit"})
+		return
+	}
 
 	const query = `
 		INSERT INTO quizzes (
