@@ -37,11 +37,13 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 		quizzes.POST("", con.QuizController.Create)
 		quizzes.GET("/:id/image", con.QuizController.GetQuizImage)
 		quizzes.GET("/:id/questions", con.QuestionController.Get)
+
 	}
 
 	questions := router.Group("/questions")
 	{
 		questions.POST("", con.QuestionController.Create)
+		questions.POST("/answers", con.QuestionController.CreateWithAnswer)
 	}
 
 	return router
