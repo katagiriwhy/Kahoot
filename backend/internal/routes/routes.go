@@ -28,7 +28,8 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 	router.POST("/register", con.UserController.Register)
 	router.DELETE("/delete", con.UserController.Delete)
 	router.GET("/quizzes", con.QuizController.GetQuizzes)
-	router.POST("quiz", con.QuizController.CreateQuiz)
+	router.GET("/quizzes/:id/image", con.QuizController.GetQuizImage)
+	router.POST("/quiz", con.QuizController.CreateQuiz)
 
 	return router
 }

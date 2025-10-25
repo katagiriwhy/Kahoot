@@ -5,33 +5,24 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const MaxSizeImage = 5 * 1024 * 1024
-
-type QuizRequest struct {
-	IsPublic       bool                 `json:"is_public" binding:"required"`
-	CreatorId      int                  `json:"creator_id" binding:"required"`
-	Difficulty     types.QuizDifficulty `json:"quiz_difficulty" binding:"required"`
-	QuestionAmount int                  `json:"question_amount" binding:"required"`
-	Title          string               `json:"title" binding:"required"`
-	TimeLimit      int                  `json:"time_limit"`
-	Description    string               `json:"description"`
-	Image          []byte               `json:"image,omitempty" db:"image"`
-}
-
 type QuizResponse struct {
-	ID             int                  `json:"id"`
+	ID             int64                `json:"id"`
 	IsPublic       bool                 `json:"is_public"`
+	CreatorID      int64                `json:"creator_id"`
+	Difficulty     types.QuizDifficulty `json:"difficulty"`
 	QuestionAmount int                  `json:"question_amount"`
 	Title          string               `json:"title"`
 	TimeLimit      int                  `json:"time_limit"`
 	Description    string               `json:"description"`
-	Difficulty     types.QuizDifficulty `json:"difficulty"`
-	Image          []byte               `json:"image"`
+	CreatedAt      *time.Time           `json:"created_at"`
+	ImageURL       string               `json:"image_url"`
 }
 
 type QuizController struct {
@@ -44,9 +35,52 @@ func NewQuizController(db *pgxpool.Pool) *QuizController {
 	}
 }
 
-func (q *QuizController) GetQuizzes(c *gin.Context) {
-	const query = `SELECT id, is_public, question_amount, description, time_limit, difficulty, title, image FROM quizzes WHERE is_public = true ORDER BY created_at DESC`
+func (q *QuizController) GetQuizImage(c *gin.Context) {
+	id := c.Param("id")
 
+	quizId, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	const query = `SELECT image FROM quizzes WHERE quiz_id = $1`
+
+	var imageData []byte
+
+	err = q.db.QueryRow(c, query, quizId).Scan(&imageData)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "quiz not found"})
+		return
+	}
+
+	// TODO check if there is no image
+
+	//if len(imageData) == 0 {
+	//	c.JSON(http.StatusNotFound, gin.H{"error": "image is not found"})
+	//	return
+	//}
+
+	contentType := http.DetectContentType(imageData)
+	c.Data(http.StatusOK, contentType, imageData)
+
+}
+
+func (q *QuizController) GetQuizzes(c *gin.Context) {
+	const query = `
+		SELECT
+			id,
+			is_public,
+			creator_id,
+			difficulty,
+			question_amount,
+			title,
+			time_limit,
+			description,
+			created_at
+		FROM quizzes
+		ORDER BY created_at DESC;
+	`
 	rows, err := q.db.Query(c.Request.Context(), query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -58,16 +92,31 @@ func (q *QuizController) GetQuizzes(c *gin.Context) {
 	var quizzes []QuizResponse
 
 	for rows.Next() {
-		var quizResponse QuizResponse
-		err := rows.Scan(&quizResponse.ID, &quizResponse.IsPublic, &quizResponse.QuestionAmount,
-			&quizResponse.Description, &quizResponse.TimeLimit, &quizResponse.Difficulty,
-			&quizResponse.Title, &quizResponse.Image,
+		var qz QuizResponse
+		err := rows.Scan(
+			&qz.ID,
+			&qz.IsPublic,
+			&qz.CreatorID,
+			&qz.Difficulty,
+			&qz.QuestionAmount,
+			&qz.Title,
+			&qz.TimeLimit,
+			&qz.Description,
+			&qz.CreatedAt,
 		)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("row scan error: %v", err)})
 			return
 		}
-		quizzes = append(quizzes, quizResponse)
+
+		qz.ImageURL = fmt.Sprintf("/quizzes/%d/image", qz.ID)
+
+		quizzes = append(quizzes, qz)
+	}
+
+	if len(quizzes) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "quizzes not found"})
+		return
 	}
 
 	if err := rows.Err(); err != nil {
@@ -75,84 +124,80 @@ func (q *QuizController) GetQuizzes(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"quizzes": quizzes})
-
+	c.JSON(http.StatusOK, quizzes)
 }
 
 func (q *QuizController) CreateQuiz(c *gin.Context) {
-	var body QuizRequest
 
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": fmt.Sprintf("can't get correct data %s", err)})
+	isPublic := c.PostForm("is_public") == "true"
+	creatorId := c.PostForm("creator_id")
+	difficulty := types.QuizDifficulty(c.PostForm("difficulty"))
+	questionAmount := c.PostForm("question_amount")
+	title := c.PostForm("title")
+	timeLimit := c.PostForm("time_limit")
+	description := c.PostForm("description")
+
+	if ok := difficulty.IsValid(); !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid difficulty"})
 		return
 	}
 
-	if ok := body.Difficulty.IsValid(); !ok {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": "difficulty is not valid"})
-		return
-	}
-
-	if body.QuestionAmount == 0 {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": "question amount is zero"})
-		return
-	}
-
-	if body.TimeLimit <= 0 {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": "time_limit is not valid"})
-		return
-	}
-
-	file, header, err := c.Request.FormFile("image")
+	file, err := c.FormFile("image")
 	if err != nil {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": fmt.Sprintf("can't get file %s", err)})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "image file is required"})
 		return
 	}
 
-	defer file.Close()
-
-	if header.Size > MaxSizeImage {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": "image size is too big"})
-		return
-	}
-
-	allowedTypes := map[string]bool{
-		"image/jpeg": true,
-		"image/jpg":  true,
-		"image/png":  true,
-		"image/gif":  true,
-	}
-
-	if !allowedTypes[header.Header.Get("Content-Type")] {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": "invalid image type"})
-		return
-	}
-
-	src, err := io.ReadAll(file)
+	src, err := file.Open()
 	if err != nil {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": fmt.Sprintf("can't read file %s", err)})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "can't open file"})
 		return
 	}
+	defer src.Close()
+
+	imageData, err := io.ReadAll(src)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "can't read image"})
+		return
+	}
+
+	creatorIdInt, err := strconv.Atoi(creatorId)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid creator_id"})
+		return
+	}
+	questionAmountInt, _ := strconv.Atoi(questionAmount)
+	timeLimitInt, _ := strconv.Atoi(timeLimit)
 
 	const query = `
-    INSERT INTO quizzes (
-      is_public, creator_id, difficulty, question_amount,
-      title, time_limit, description, image
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    RETURNING id;
-  `
+		INSERT INTO quizzes (
+			is_public, creator_id, image, difficulty, question_amount,
+			title, time_limit, description
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id;
+	`
 
-	var questionId int
-	err = q.db.QueryRow(c, query, body.IsPublic, body.CreatorId, body.Difficulty, body.QuestionAmount,
-		body.Title, body.TimeLimit, body.Description, src).Scan(&questionId)
+	var quizID int64
+	err = q.db.QueryRow(
+		c, query,
+		isPublic,
+		creatorIdInt,
+		imageData,
+		difficulty,
+		questionAmountInt,
+		title,
+		timeLimitInt,
+		description,
+	).Scan(&quizID)
 
 	if err != nil {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": fmt.Sprintf("can't insert quizzes %s", err)})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("db insert error: %v", err)})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"quiz_id": questionId,
+	c.JSON(http.StatusOK, gin.H{
+		"message": "quiz created successfully",
+		"quiz_id": quizID,
 	})
-
 }
