@@ -44,6 +44,7 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 	{
 		questions.POST("", con.QuestionController.Create)
 		questions.POST("/answers", con.QuestionController.CreateWithAnswer)
+		questions.POST("/:id/answer", con.AnswerController.Create)
 	}
 
 	return router
