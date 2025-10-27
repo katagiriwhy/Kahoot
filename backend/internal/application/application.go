@@ -51,12 +51,14 @@ func initControllers(p *pgxpool.Pool) *controllers.Controllers {
 	questionCon := controllers.NewQuestionsController(p)
 	answerCon := controllers.NewAnswersController(p)
 	gameSessionCon := controllers.NewGameSessionController(p)
+	sessionPlayersCon := controllers.NewSessionPlayersController(p)
 
 	return &controllers.Controllers{
-		UserController:        userCon,
-		QuizController:        quizCon,
-		QuestionController:    questionCon,
-		AnswerController:      answerCon,
-		GameSessionController: gameSessionCon,
+		UserController:           userCon,
+		QuizController:           quizCon,
+		QuestionController:       questionCon,
+		AnswerController:         answerCon,
+		GameSessionController:    gameSessionCon,
+		SessionPlayersController: sessionPlayersCon,
 	}
 }
