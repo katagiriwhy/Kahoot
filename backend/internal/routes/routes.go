@@ -2,6 +2,7 @@ package routes
 
 import (
 	"backend/backend/internal/controllers"
+	"backend/backend/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,6 +21,10 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
+func authGroup(router *gin.Engine) *gin.RouterGroup {
+	return router.Group("/", middleware.AuthMiddleware())
+}
+
 func NewRoutes(con *controllers.Controllers) *gin.Engine {
 	router := gin.Default()
 	router.Use(corsMiddleware())
@@ -31,22 +36,23 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 		users.DELETE("/delete", con.UserController.Delete)
 	}
 
-	quizzes := router.Group("/quizzes")
+	auth := authGroup(router)
+
+	quizzes := auth.Group("/quizzes")
 	{
 		quizzes.GET("", con.QuizController.GetQuizzes)
 		quizzes.POST("", con.QuizController.Create)
 		quizzes.GET("/:id/image", con.QuizController.GetQuizImage)
 		quizzes.GET("/:id/questions", con.QuestionController.Get)
-
 	}
 
-	questions := router.Group("/questions")
+	questions := auth.Group("/questions")
 	{
 		questions.POST("", con.QuestionController.Create)
 		questions.POST("/answers", con.QuestionController.CreateWithAnswer)
 	}
 
-	answers := router.Group("/answers")
+	answers := auth.Group("/answers")
 	{
 		answers.POST("/:id", con.AnswerController.Create)
 		answers.GET("/:id", con.AnswerController.Get)

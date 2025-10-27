@@ -12,6 +12,8 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+var secretKey = []byte(os.Getenv("SECRET_KEY"))
+
 func GenerateToken(userId int64) (string, error) {
 	claims := Claims{
 		UserID: userId,
@@ -21,11 +23,21 @@ func GenerateToken(userId int64) (string, error) {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
 		return "", err
 	}
 	return tokenString, nil
 }
 
-func ValidateToken(token string)
+func ValidateToken(tokenString string) (*Claims, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
+		return secretKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, err
+	}
+	return claims, nil
+}

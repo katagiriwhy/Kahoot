@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"backend/backend/internal/utils"
 	"fmt"
 	"net/http"
 
@@ -85,11 +86,12 @@ func (con *UserController) Login(c *gin.Context) {
 		return
 	}
 
-	const query = `SELECT password, username FROM users WHERE login = $1`
+	const query = `SELECT id, password, username FROM users WHERE login = $1`
 
+	var userID int64
 	var hash, username string
 
-	err := con.db.QueryRow(c, query, body.Login).Scan(&hash, &username)
+	err := con.db.QueryRow(c, query, body.Login).Scan(&userID, &hash, &username)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to find user: " + err.Error()})
@@ -103,7 +105,15 @@ func (con *UserController) Login(c *gin.Context) {
 		return
 	}
 
+	token, err := utils.GenerateToken(userID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create token: " + err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Welcome " + username,
+		"token":   token,
 	})
 }
