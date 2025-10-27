@@ -58,5 +58,10 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 		answers.GET("/:id", con.AnswerController.Get)
 	}
 
+	sessions := auth.Group("/sessions")
+	{
+		sessions.POST("", con.GameSessionController.Create)
+	}
+
 	return router
 }
