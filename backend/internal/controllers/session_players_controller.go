@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -102,4 +103,69 @@ func (s *SessionPlayersController) Get(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"players": players})
+}
+
+func (s *SessionPlayersController) Delete(c *gin.Context) {
+	id, received := c.Get("user_id")
+	if !received {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	userID, ok := id.(int64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user_id"})
+		return
+	}
+
+	sessionIDStr := c.Param("id")
+	sessionID, err := strconv.ParseInt(sessionIDStr, 10, 64)
+	if err != nil || sessionID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session id"})
+		return
+	}
+
+	var startedAt *time.Time
+	err = s.db.QueryRow(c.Request.Context(),
+		`SELECT started_at FROM game_sessions WHERE id = $1`, sessionID,
+	).Scan(&startedAt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if startedAt != nil {
+		c.JSON(400, gin.H{"error": "session started_at cannot be set"})
+		return
+	}
+
+	var inSession bool
+	err = s.db.QueryRow(c.Request.Context(),
+		`SELECT EXISTS(SELECT 1 FROM session_players WHERE session_id = $1 AND user_id = $2)`,
+		sessionID, userID,
+	).Scan(&inSession)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
+	if !inSession {
+		c.JSON(http.StatusForbidden, gin.H{"error": "you are not in this session"})
+		return
+	}
+
+	const query = `DELETE FROM session_players WHERE session_id = $1 AND user_id = $2`
+
+	rows, err := s.db.Exec(c.Request.Context(), query, sessionID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if affected := rows.RowsAffected(); affected != 1 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "affected rows not match"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "deleted",
+		"session_id": sessionID})
 }
