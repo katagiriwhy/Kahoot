@@ -2,7 +2,6 @@ package ws
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"sync"
 
@@ -105,9 +104,11 @@ func (h *Hub) broadcastLobby(sessionId int64) {
 	}
 
 	h.mu.RLock()
-	// TODO not sure about checking ok
-	clients := h.Clients[sessionId]
+	clients, ok := h.Clients[sessionId]
 	h.mu.RUnlock()
+	if !ok || clients == nil {
+		return
+	}
 
 	for client := range clients {
 		select {
@@ -144,7 +145,7 @@ func (h *Hub) getPlayers(sessionId int64) ([]Player, error) {
 	}
 
 	if len(players) == 0 {
-		return nil, errors.New("no players found")
+		return []Player{}, nil
 	}
 
 	if err := rows.Err(); err != nil {

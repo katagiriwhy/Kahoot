@@ -68,13 +68,13 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 		answers.GET("/:id", con.AnswerController.Get)
 	}
 
-	sessions := auth.Group("/game-sessions")
+	sessions := auth.Group("/ws/game-sessions")
 	{
 		sessions.POST("", con.GameSessionController.Create)
-		sessions.POST("/join", con.GameSessionController.Join)
 		sessions.POST("/start", con.GameSessionController.Start)
 		sessions.POST("/end", con.GameSessionController.End)
 		sessions.GET("/:id/players", con.SessionPlayersController.Get)
+		sessions.GET("/join", con.GameSessionController.Join)
 		sessions.DELETE("/:id/players", con.SessionPlayersController.Delete)
 		sessions.DELETE("/:id", con.GameSessionController.Delete)
 	}
