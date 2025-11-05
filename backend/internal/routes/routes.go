@@ -3,9 +3,19 @@ package routes
 import (
 	"backend/backend/internal/controllers"
 	"backend/backend/internal/middleware"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
+
+var Upgrader = websocket.Upgrader{
+	ReadBufferSize:  2048,
+	WriteBufferSize: 2048,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {

@@ -4,6 +4,7 @@ import (
 	"backend/backend/internal/controllers"
 	"backend/backend/internal/database"
 	"backend/backend/internal/routes"
+	"backend/backend/internal/ws"
 	"context"
 	"os"
 
@@ -15,6 +16,7 @@ type Application struct {
 	db          *database.Storage
 	controllers *controllers.Controllers
 	router      *gin.Engine
+	hub         *ws.Hub
 }
 
 func NewApplication() *Application {
@@ -30,13 +32,18 @@ func NewApplication() *Application {
 
 	engine := routes.NewRoutes(controls)
 
+	hub := ws.NewHub(pool)
+
 	return &Application{
 		db:     db,
 		router: engine,
+		hub:    hub,
 	}
 }
 
 func (a *Application) Run() {
+
+	go a.hub.Run()
 
 	a.router.Run(os.Getenv("PORT"))
 	if a.db != nil {

@@ -1,13 +1,16 @@
 package controllers
 
 import (
+	"backend/backend/internal/routes"
+	"backend/backend/internal/ws"
 	"database/sql"
 	"errors"
-	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type GameSessionController struct {
@@ -85,6 +88,29 @@ func (g *GameSessionController) Create(c *gin.Context) {
 }
 
 func (g *GameSessionController) Join(c *gin.Context) {
+
+	conn, err := routes.Upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		// TODO log the error
+		return
+	}
+
+	var sessionId int64
+
+	if err := conn.ReadJSON(&sessionId); err != nil {
+		conn.WriteJSON(gin.H{"error": "invalid session id while joining lobby"})
+		conn.Close()
+		return
+	}
+
+	if sessionId <= 0 {
+		conn.WriteJSON(gin.H{"error": "session id can't be negative or zero"})
+		conn.Close()
+		return
+	}
+
+	client := ws.NewClient(conn, sessionId)
+
 	userIDStr, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unable to get user_id while joining a new game session"})
@@ -97,26 +123,12 @@ func (g *GameSessionController) Join(c *gin.Context) {
 		return
 	}
 
-	var input struct {
-		SessionId int64 `json:"session_id" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if input.SessionId <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "session_id must be positive"})
-		return
-	}
-
 	const query = `SELECT started_at, host_id FROM game_sessions WHERE id = $1`
 
 	var startedAt *time.Time
 	var hostId int64
 
-	err := g.db.QueryRow(c.Request.Context(), query, input.SessionId).Scan(&startedAt, &hostId)
+	err = g.db.QueryRow(c.Request.Context(), query, sessionId).Scan(&startedAt, &hostId)
 	if errors.Is(err, sql.ErrNoRows) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
 		return
@@ -147,7 +159,7 @@ func (g *GameSessionController) Join(c *gin.Context) {
 
 	const sessionQuery = `INSERT INTO session_players (session_id, user_id, nickname) VALUES ($1, $2, $3) ON CONFLICT (session_id, user_id) DO NOTHING`
 
-	_, err = g.db.Exec(c.Request.Context(), sessionQuery, input.SessionId, userId, nickname)
+	_, err = g.db.Exec(c.Request.Context(), sessionQuery, sessionId, userId, nickname)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -156,7 +168,7 @@ func (g *GameSessionController) Join(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"nickname":   nickname,
-		"session_id": input.SessionId,
+		"session_id": sessionId,
 	})
 }
 
