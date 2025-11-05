@@ -65,7 +65,7 @@ func (h *Hub) registerClient(client *Client) {
 	h.Clients[client.SessionID][client] = true
 	h.mu.Unlock()
 
-	h.broadcastLobby(client.SessionID)
+	h.BroadcastLobby(client.SessionID)
 }
 
 func (h *Hub) unregisterClient(client *Client) {
@@ -80,10 +80,10 @@ func (h *Hub) unregisterClient(client *Client) {
 		}
 	}
 	h.mu.Unlock()
-	h.broadcastLobby(client.SessionID)
+	h.BroadcastLobby(client.SessionID)
 }
 
-func (h *Hub) broadcastLobby(sessionId int64) {
+func (h *Hub) BroadcastLobby(sessionId int64) {
 	players, err := h.getPlayers(sessionId)
 	if err != nil {
 		log.Println(err)
