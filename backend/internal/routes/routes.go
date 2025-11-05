@@ -66,6 +66,7 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 		sessions.POST("/end", con.GameSessionController.End)
 		sessions.GET("/:id/players", con.SessionPlayersController.Get)
 		sessions.DELETE("/:id/players", con.SessionPlayersController.Delete)
+		sessions.DELETE("/:id", con.GameSessionController.Delete)
 	}
 
 	return router
