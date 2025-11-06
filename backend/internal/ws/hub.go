@@ -3,12 +3,21 @@ package ws
 import (
 	"encoding/json"
 	"log"
+	"net/http"
 	"sync"
 
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/net/context"
 )
+
+var Upgrader = websocket.Upgrader{
+	ReadBufferSize:  2048,
+	WriteBufferSize: 2048,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 type Player struct {
 	Nickname string `json:"nickname"`
@@ -18,13 +27,15 @@ type Client struct {
 	Conn      *websocket.Conn
 	Send      chan []byte
 	SessionID int64
+	UserID    int64
 }
 
-func NewClient(conn *websocket.Conn, sessionId int64) *Client {
+func NewClient(conn *websocket.Conn, sessionId int64, userId int64) *Client {
 	return &Client{
 		Conn:      conn,
 		Send:      make(chan []byte),
 		SessionID: sessionId,
+		UserID:    userId,
 	}
 }
 

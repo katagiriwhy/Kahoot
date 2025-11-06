@@ -24,15 +24,15 @@ func NewApplication() *Application {
 
 	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 
-	controls := initControllers(pool)
-
 	if err != nil {
 		panic(err)
 	}
 
-	engine := routes.NewRoutes(controls)
-
 	hub := ws.NewHub(pool)
+
+	controls := initControllers(pool, hub)
+
+	engine := routes.NewRoutes(controls)
 
 	return &Application{
 		db:     db,
@@ -51,13 +51,13 @@ func (a *Application) Run() {
 	}
 }
 
-func initControllers(p *pgxpool.Pool) *controllers.Controllers {
+func initControllers(p *pgxpool.Pool, hub *ws.Hub) *controllers.Controllers {
 
 	userCon := controllers.NewUserController(p)
 	quizCon := controllers.NewQuizController(p)
 	questionCon := controllers.NewQuestionsController(p)
 	answerCon := controllers.NewAnswersController(p)
-	gameSessionCon := controllers.NewGameSessionController(p)
+	gameSessionCon := controllers.NewGameSessionController(p, hub)
 	sessionPlayersCon := controllers.NewSessionPlayersController(p)
 
 	return &controllers.Controllers{

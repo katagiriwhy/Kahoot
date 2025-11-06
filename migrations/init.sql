@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS public.session_players (
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   nickname VARCHAR(30) NOT NULL,
   joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(session_id, user_id),
+  UNIQUE(session_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.player_answers (
