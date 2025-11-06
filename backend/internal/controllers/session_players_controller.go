@@ -53,7 +53,7 @@ func (s *SessionPlayersController) Get(c *gin.Context) {
 	}
 
 	if !exists {
-		c.JSON(404, gin.H{"error": "session not found"})
+		c.JSON(404, gin.H{"error": "session was not found"})
 		return
 	}
 
