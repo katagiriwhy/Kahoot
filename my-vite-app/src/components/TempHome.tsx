@@ -6,11 +6,16 @@ function TempHome () {
         <>
             <h1>Temp Home Page</h1>
             <h2>Pages: </h2>
+            <h3>Done: </h3>
             <Link to={`/login`}>
                 <p>LOGIN </p>
             </Link>
             <Link to={`/register`}>
                 <p>REGISTER </p>
+            </Link>
+            <h3>Under development: </h3>
+            <Link to={`/newquiz`}>
+                <p>NEW QUIZ </p>
             </Link>
         </>
     )
