@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import axios from 'axios';
+import { Link } from 'react-router-dom';
+
+import axios from './Api';
+
+const REGISTER_URL = '/register'; //TODO: тот эндпоинт?
 
 function Register() {
     const [formData, setFormData] = useState({
@@ -31,7 +35,7 @@ function Register() {
 
         console.log('Данные для отправки:', formData);
 
-        axios.post('/user', { //TODO: добавить эндпоинт
+        axios.post(REGISTER_URL, {
             username: formData.username,
             login: formData.login,
             password: formData.password
@@ -49,7 +53,7 @@ function Register() {
     return (
         <>
             <h1>Register</h1>
-            <form className="register" onSubmit={handleSubmit}>
+            <form className="registerform" onSubmit={handleSubmit}>
                 <input id="username" className="username" type="text" placeholder="Login" onChange={handleChange} required />
                 <input id="login" className="login" type="text" placeholder="Username" onChange={handleChange} required />
                 <input id="password" className="password" type="password" placeholder="Password" onChange={handleChange} required />
@@ -57,7 +61,9 @@ function Register() {
                 <button type="submit">Submit</button>
                 <button type="reset">Reset</button>
             </form>
-
+            <Link to={`/login`}>
+                <p>Already Registered User? Click here to login </p>
+            </Link>
         </>
     )
 }
