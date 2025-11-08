@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import axios from './Api';
-import { NEW_QOUZ_URL } from './Api';
+import { NEW_QUIZ_URL } from './Api';
 
 function NewQuiz() {
 
@@ -13,7 +13,7 @@ function NewQuiz() {
         e.preventDefault();
         const data = JSON.stringify(questions)
         console.log('Submitted questions:', data);
-        axios.post(NEW_QOUZ_URL,
+        axios.post(NEW_QUIZ_URL,
             data
         )
             .then(function (response) {
