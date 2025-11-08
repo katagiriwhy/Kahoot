@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import axios from './Api';
-
-const REGISTER_URL = '/register'; //TODO: тот эндпоинт?
+import { REGISTER_URL } from './Api';
 
 function Register() {
     const [formData, setFormData] = useState({

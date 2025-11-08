@@ -1,7 +1,7 @@
-import axios from './Api';
 import { useState } from 'react';
 
-const NEW_QOUZ_URL = '/new_quiz';
+import axios from './Api';
+import { NEW_QOUZ_URL } from './Api';
 
 function NewQuiz() {
 
@@ -13,7 +13,6 @@ function NewQuiz() {
         e.preventDefault();
         const data = JSON.stringify(questions)
         console.log('Submitted questions:', data);
-        // TODO: отправка данных
         axios.post(NEW_QOUZ_URL,
             data
         )

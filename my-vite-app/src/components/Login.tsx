@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import axios from './Api';
-
-const LOGIN_URL = '/auth'; //TODO: тот эндпоинт?
+import { LOGIN_URL } from './Api';
 
 function Login() {
 
