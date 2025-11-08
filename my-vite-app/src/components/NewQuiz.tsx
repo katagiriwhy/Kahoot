@@ -1,6 +1,8 @@
 import axios from './Api';
 import { useState } from 'react';
 
+const NEW_QOUZ_URL = '/new_quiz';
+
 function NewQuiz() {
 
     const [questions, setQuestions] = useState([
@@ -9,8 +11,18 @@ function NewQuiz() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        console.log('Submitted questions:', questions);
+        const data = JSON.stringify(questions)
+        console.log('Submitted questions:', data);
         // TODO: отправка данных
+        axios.post(NEW_QOUZ_URL,
+            data
+        )
+            .then(function (response) {
+                console.log(response);
+            })
+            .catch(function (error) {
+                console.log(error);
+            })
     };
 
     const addQuestion = () => {
@@ -42,11 +54,11 @@ function NewQuiz() {
                 {questions.map((item, index) => (
                     <div key={index} className="question-item">
                         <input type="text" placeholder={`Question ${index + 1}`} value={item.question} onChange={(e) => handleQuestionChange(index, e.target.value)} required />
-                        <select value={item.isCorrect}onChange={(e) => handleCorrectnessChange(index, e.target.value)}>
+                        <select value={item.isCorrect} onChange={(e) => handleCorrectnessChange(index, e.target.value)}>
                             <option value={true}>True</option>
                             <option value={false}>False</option>
                         </select>
-                        {questions.length > 1 && ( <button type="button" onClick={() => removeQuestion(index)}>Delete</button>)}
+                        {questions.length > 1 && (<button type="button" onClick={() => removeQuestion(index)}>Delete</button>)}
                     </div>
                 ))}
                 <button type="submit">Submit</button>
