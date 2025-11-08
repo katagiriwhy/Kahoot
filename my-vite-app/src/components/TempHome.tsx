@@ -13,10 +13,10 @@ function TempHome () {
             <Link to={`/register`}>
                 <p>REGISTER </p>
             </Link>
-            <h3>Under development: </h3>
             <Link to={`/newquiz`}>
                 <p>NEW QUIZ </p>
             </Link>
+            <h3>Under development: </h3>
         </>
     )
 }
