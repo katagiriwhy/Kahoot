@@ -2,6 +2,7 @@ import './App.css'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Register from './components/Register'
 import Login from './components/Login'
+import TempHome from './components/TempHome';
 
 function App() {
 
@@ -9,10 +10,9 @@ function App() {
     <>
       <Router>
         <Routes>
+          <Route path="/" element={<TempHome />} /> 
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          {/* Временно */}
-          <Route path="/" element={<Register />} /> 
         </Routes>
       </Router>
     </>
