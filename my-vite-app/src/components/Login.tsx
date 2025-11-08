@@ -45,8 +45,8 @@ function Login() {
         <>
             <h1>Log In</h1>
             <form className="loginform" onSubmit={handleSubmit}>
-                <input id="login" className="login" type="text" placeholder="Username" onChange={handleChange} required />
-                <input id="password" className="password" type="password" placeholder="Password" onChange={handleChange} required />
+                <input id="login" className="login" type="text" placeholder="Username" value={formData.login} onChange={handleChange} required />
+                <input id="password" className="password" type="password" placeholder="Password" value={formData.password} onChange={handleChange} required />
                 <button type="submit" disabled={loading}>{loading ? 'Loading...' : 'Submit'}</button>
                 <button type="reset">Reset</button>
             </form>

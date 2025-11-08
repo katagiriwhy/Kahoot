@@ -58,10 +58,10 @@ function Register() {
         <>
             <h1>Register</h1>
             <form className="registerform" onSubmit={handleSubmit}>
-                <input id="username" className="username" type="text" placeholder="Login" onChange={handleChange} required />
-                <input id="login" className="login" type="text" placeholder="Username" onChange={handleChange} required />
-                <input id="password" className="password" type="password" placeholder="Password" onChange={handleChange} required />
-                <input id="password2" className="password" type="password" placeholder="Confirm password" onChange={handleChange} required />
+                <input id="username" className="username" type="text" placeholder="Login" value={formData.username} onChange={handleChange} required />
+                <input id="login" className="login" type="text" placeholder="Username" value={formData.login} onChange={handleChange} required />
+                <input id="password" className="password" type="password" placeholder="Password" value={formData.password} onChange={handleChange} required />
+                <input id="password2" className="password" type="password" placeholder="Confirm password" value={formData.password2} onChange={handleChange} required />
                 <button type="submit" disabled={loading}>{loading ? "Loading..." : "Submit"}</button>
                 <button type="reset">Reset</button>
             </form>
