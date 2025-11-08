@@ -13,6 +13,8 @@ function Register() {
         password2: ''
     });
 
+    const [loading, setLoading] = useState(false);
+
     const handleChange = (e) => {
         const { id, value } = e.target;
         setFormData(prevState => ({
@@ -23,6 +25,8 @@ function Register() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        setLoading(true);
 
         if (formData.password !== formData.password2) {
             alert('Passwords are not identical');
@@ -42,9 +46,14 @@ function Register() {
         })
             .then(function (response) {
                 console.log(response);
+                setLoading(false);
             })
             .catch(function (error) {
                 console.log(error);
+                setLoading(false);
+            })
+            .finally(function(){
+                setLoading(false);
             });
     };
 
@@ -58,7 +67,7 @@ function Register() {
                 <input id="login" className="login" type="text" placeholder="Username" onChange={handleChange} required />
                 <input id="password" className="password" type="password" placeholder="Password" onChange={handleChange} required />
                 <input id="password2" className="password" type="password" placeholder="Confirm password" onChange={handleChange} required />
-                <button type="submit">Submit</button>
+                <button type="submit" disabled={loading}>{loading ? "Loading..." : "Submit"}</button>
                 <button type="reset">Reset</button>
             </form>
             <Link to={`/login`}>
