@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import axios from 'axios';
 
 function Register() {
     const [formData, setFormData] = useState({
@@ -18,19 +19,33 @@ function Register() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        
+
         if (formData.password !== formData.password2) {
-            alert('Пароли не совпадают!');
+            alert('Passwords are not identical');
             return;
         }
-
         if (formData.password.length < 6) {
-            alert('Пароль должен содержать минимум 6 символов');
+            alert('Password length must be > 6');
             return;
         }
 
-        console.log('Данные для отправки:', formData);        
+        console.log('Данные для отправки:', formData);
+
+        axios.post('/user', { //TODO: добавить эндпоинт
+            username: formData.username,
+            login: formData.login,
+            password: formData.password
+        })
+            .then(function (response) {
+                console.log(response);
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
     };
+
+
+
     return (
         <>
             <h1>Register</h1>
@@ -42,7 +57,7 @@ function Register() {
                 <button type="submit">Submit</button>
                 <button type="reset">Reset</button>
             </form>
-            
+
         </>
     )
 }
