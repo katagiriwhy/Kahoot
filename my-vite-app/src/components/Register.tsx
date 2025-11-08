@@ -46,11 +46,9 @@ function Register() {
         })
             .then(function (response) {
                 console.log(response);
-                setLoading(false);
             })
             .catch(function (error) {
                 console.log(error);
-                setLoading(false);
             })
             .finally(function(){
                 setLoading(false);
