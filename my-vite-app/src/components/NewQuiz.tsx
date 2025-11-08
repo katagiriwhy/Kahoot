@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 
 import axios from './Api';
 import { NEW_QUIZ_URL } from './Api';
@@ -9,13 +10,11 @@ function NewQuiz() {
         { question: '', isCorrect: true }
     ]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const data = JSON.stringify(questions)
         console.log('Submitted questions:', data);
-        axios.post(NEW_QUIZ_URL,
-            data
-        )
+        axios.post(NEW_QUIZ_URL, data)
             .then(function (response) {
                 console.log(response);
             })
@@ -28,20 +27,20 @@ function NewQuiz() {
         setQuestions([...questions, { question: '', isCorrect: true }]);
     };
 
-    const removeQuestion = (index) => {
+    const removeQuestion = (index: number) => {
         if (questions.length > 1) {
             const newQuestions = questions.filter((_, i) => i !== index);
             setQuestions(newQuestions);
         }
     };
 
-    const handleQuestionChange = (index, value) => {
+    const handleQuestionChange = (index: number, value: string) => {
         const newQuestions = [...questions];
         newQuestions[index].question = value;
         setQuestions(newQuestions);
     };
 
-    const handleCorrectnessChange = (index, value) => {
+    const handleCorrectnessChange = (index: number, value: string) => {
         const newQuestions = [...questions];
         newQuestions[index].isCorrect = value === 'true';
         setQuestions(newQuestions);
@@ -53,9 +52,9 @@ function NewQuiz() {
                 {questions.map((item, index) => (
                     <div key={index} className="question-item">
                         <input type="text" placeholder={`Question ${index + 1}`} value={item.question} onChange={(e) => handleQuestionChange(index, e.target.value)} required />
-                        <select value={item.isCorrect} onChange={(e) => handleCorrectnessChange(index, e.target.value)}>
-                            <option value={true}>True</option>
-                            <option value={false}>False</option>
+                        <select value={item.isCorrect.toString()} onChange={(e) => handleCorrectnessChange(index, e.target.value)}>
+                            <option value={"true"}>True</option>
+                            <option value={"false"}>False</option>
                         </select>
                         {questions.length > 1 && (<button type="button" onClick={() => removeQuestion(index)}>Delete</button>)}
                     </div>
