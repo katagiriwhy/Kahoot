@@ -1,0 +1,140 @@
+/* Контейнер всей формы */
+.login-container {
+    max-width: 350px;
+    margin: 80px auto;
+    padding: 24px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    font-family: Arial, sans-serif;
+
+    /* fade-in */
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeIn 0.6s ease forwards;
+}
+
+/* Заголовок */
+.login-title {
+    margin-bottom: 16px;
+    font-size: 28px;
+    font-weight: bold;
+    animation: slideDown 0.5s ease;
+}
+
+/* Форма */
+.loginform {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+
+    animation: fadeIn 0.8s ease forwards;
+}
+
+/* Input поля */
+.loginform input {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #aaa;
+    font-size: 14px;
+    outline: none;
+    transition: 0.25s ease;
+}
+
+/* Hover + focus */
+.loginform input:hover {
+    border-color: #4e83ff;
+}
+
+.loginform input:focus {
+    border-color: #4e83ff;
+    box-shadow: 0 0 6px rgba(78, 131, 255, 0.4);
+}
+
+/* Ошибка */
+.login-error {
+    color: #ff3b3b;
+    font-size: 14px;
+    margin-top: -6px;
+    animation: shake 0.3s ease;
+}
+
+/* Кнопки */
+.loginform button {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.25s ease;
+    background: #4e83ff;
+    color: white;
+    font-weight: bold;
+}
+
+/* Hover */
+.loginform button:hover:not(:disabled) {
+    background: #2e63e0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(78, 131, 255, 0.4);
+}
+
+/* Disabled */
+.loginform button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Reset button */
+.loginform button:nth-of-type(2) {
+    background: #eee;
+    color: black;
+}
+
+.loginform button:nth-of-type(2):hover {
+    background: #ddd;
+}
+
+/* Ссылка */
+.register-text {
+    margin-top: 18px;
+    font-size: 14px;
+    color: #3d6bff;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.register-text:hover {
+    text-decoration: underline;
+    transform: scale(1.05);
+}
+
+/* ====== ✨ АНИМАЦИИ ====== */
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    50% { transform: translateX(4px); }
+    75% { transform: translateX(-2px); }
+    100% { transform: translateX(0); }
+}
