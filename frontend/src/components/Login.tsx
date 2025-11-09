@@ -31,15 +31,20 @@ function Login() {
         try {
             console.log("Sending:", formData);
 
-            const response = await api.post(`${LOGIN_URL}/login`, formData);
+            // ✅ правильный эндпоинт — без /login в конце
+            const response = await api.post(LOGIN_URL, formData);
 
-            localStorage.setItem("token", response.data.token);
+            // ✅ сохраняем token в localStorage
+            if (response.data?.token) {
+                localStorage.setItem("token", response.data.token);
+            } else {
+                throw new Error("No token received");
+            }
 
             console.log("✅ Login successful!");
-
-            navigate("/"); // перенаправление после логина
+            navigate("/");
         } catch (err: any) {
-            console.log(err);
+            console.error(err);
             setError(err?.response?.data?.error || "Ошибка входа");
         } finally {
             setLoading(false);
