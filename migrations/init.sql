@@ -12,13 +12,14 @@ CREATE TABLE IF NOT EXISTS public.quizzes (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   is_public BOOLEAN DEFAULT TRUE,
   creator_id  BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  image BYTEA,
   difficulty quiz_difficulty DEFAULT 'Легкий',
   question_amount INTEGER DEFAULT 0,
   title VARCHAR(255) NOT NULL,
   time_limit INTEGER DEFAULT 15,
   description TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  image BYTEA
+
 );
 
 CREATE TABLE IF NOT EXISTS public.questions (

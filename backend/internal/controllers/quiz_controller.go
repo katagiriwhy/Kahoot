@@ -142,24 +142,41 @@ func (q *QuizController) Create(c *gin.Context) {
 		return
 	}
 
+	var imageData []byte
+
 	file, err := c.FormFile("image")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "image file is required"})
-		return
+	if err == nil {
+		src, err := file.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "can't open file"})
+			return
+		}
+		defer src.Close()
+		imageData, err = io.ReadAll(src)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "can't read image"})
+			return
+		}
 	}
 
-	src, err := file.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "can't open file"})
-		return
-	}
-	defer src.Close()
-
-	imageData, err := io.ReadAll(src)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "can't read image"})
-		return
-	}
+	//file, err := c.FormFile("image")
+	//if err != nil {
+	//	c.JSON(http.StatusBadRequest, gin.H{"error": "image file is required"})
+	//	return
+	//}
+	//
+	//src, err := file.Open()
+	//if err != nil {
+	//	c.JSON(http.StatusInternalServerError, gin.H{"error": "can't open file"})
+	//	return
+	//}
+	//defer src.Close()
+	//
+	//imageData, err := io.ReadAll(src)
+	//if err != nil {
+	//	c.JSON(http.StatusInternalServerError, gin.H{"error": "can't read image"})
+	//	return
+	//}
 
 	creatorIdInt, err := strconv.Atoi(creatorId)
 	if err != nil {
