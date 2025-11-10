@@ -11,15 +11,18 @@ function TempHome() {
 
                 <div className="btn-group">
                     <Link to="/login" className="nav-btn">
-                        LOGIN
+                        Login
                     </Link>
 
                     <Link to="/register" className="nav-btn">
-                        REGISTER
+                        Register
                     </Link>
 
                     <Link to="/newquiz" className="nav-btn">
-                        NEW QUIZ
+                        New quiz
+                    </Link>
+                    <Link to="new-question" className="nav-btn">
+                        New question
                     </Link>
                 </div>
 
