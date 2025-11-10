@@ -112,8 +112,17 @@ func (con *UserController) Login(c *gin.Context) {
 		return
 	}
 
+	c.SetCookie(
+		"session_token",
+		token,
+		60*60*24,
+		"/",
+		"",
+		false,
+		true,
+	)
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Welcome " + username,
-		"token":   token,
+		"user_id": userID,
 	})
 }

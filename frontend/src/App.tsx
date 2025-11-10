@@ -6,6 +6,7 @@ import TempHome from './components/TempHome';
 import Home from './components/Home';
 import QuizCreate from "./components/QuizCreate.tsx";
 import CreateQuestions from "./components/CreateQuestions.tsx";
+import Lobby from "./components/Lobby.tsx";
 
 function App() {
 
@@ -19,6 +20,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/newquiz" element={<QuizCreate />} />
           <Route path="/new-question" element={<CreateQuestions />} />
+            <Route path="/lobby/:id" element={<Lobby />} />
         </Routes>
       </Router>
     </>

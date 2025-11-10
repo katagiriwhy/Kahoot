@@ -30,14 +30,14 @@ func GenerateToken(userId int64) (string, error) {
 	return tokenString, nil
 }
 
-func ValidateToken(tokenString string) (*Claims, error) {
+func ValidateToken(tokenString string) (int64, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
 		return secretKey, nil
 	})
 
 	if err != nil || !token.Valid {
-		return nil, err
+		return 0, err
 	}
-	return claims, nil
+	return claims.UserID, nil
 }

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"backend/backend/internal/utils"
 	"backend/backend/internal/ws"
 	"database/sql"
 	"errors"
@@ -96,6 +97,18 @@ func (g *GameSessionController) Join(c *gin.Context) {
 		return
 	}
 
+	token, err := c.Cookie("session_token")
+	if err != nil {
+		conn.WriteJSON(gin.H{"error": "missing auth cookie"})
+		return
+	}
+
+	userID, err := utils.ValidateToken(token)
+	if err != nil {
+		conn.WriteJSON(gin.H{"error": "invalid token"})
+		return
+	}
+
 	var sessionId int64
 
 	if err := conn.ReadJSON(&sessionId); err != nil {
@@ -105,12 +118,6 @@ func (g *GameSessionController) Join(c *gin.Context) {
 
 	if sessionId <= 0 {
 		conn.WriteJSON(gin.H{"error": "session id can't be negative or zero"})
-		return
-	}
-
-	userID, ok := getUserId(c)
-	if !ok {
-		conn.WriteJSON(gin.H{"error": "unauthorized"})
 		return
 	}
 

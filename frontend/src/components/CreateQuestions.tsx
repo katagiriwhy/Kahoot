@@ -74,56 +74,61 @@ const CreateQuestions = () => {
     };
 
     return (
-        <div className="create-questions-container">
-            <h1>Create Question</h1>
-            <form onSubmit={handleSubmit}>
-                <label>Quiz ID</label>
-                <input type="number" value={quizId} onChange={(e) => setQuizId(e.target.value)} required />
+        <div className="cq-wrapper">
+            <div className="cq-card">
+                <div className="create-questions-container">
+                    <h1>Create Question</h1>
+                    <form onSubmit={handleSubmit}>
+                        <label>Quiz ID</label>
+                        <input type="number" value={quizId} onChange={(e) => setQuizId(e.target.value)} required />
 
-                <label>Question Text</label>
-                <textarea value={questionText} onChange={(e) => setQuestionText(e.target.value)} required />
+                        <label>Question Text</label>
+                        <textarea value={questionText} onChange={(e) => setQuestionText(e.target.value)} required />
 
-                <label>Points</label>
-                <input type="number" min={1} value={points} onChange={(e) => setPoints(parseInt(e.target.value))} required />
+                        <label>Points</label>
+                        <input type="number" min={1} value={points} onChange={(e) => setPoints(parseInt(e.target.value))} required />
 
-                <h3>Answers</h3>
-                {answers.map((ans, index) => (
-                    <div key={index}>
-                        <input
-                            type="text"
-                            placeholder={`Answer ${index + 1}`}
-                            value={ans.answer_text}
-                            onChange={(e) => handleAnswerChange(index, "answer_text", e.target.value)}
-                            required
-                        />
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={ans.is_correct}
-                                onChange={(e) => handleAnswerChange(index, "is_correct", e.target.checked)}
-                            />
-                            Correct
-                        </label>
-                        {answers.length > 2 && (
-                            <button type="button" onClick={() => removeAnswer(index)}>
-                                Remove
+                        <h3>Answers</h3>
+                        {answers.map((ans, index) => (
+                            <div key={index}>
+                                <input
+                                    type="text"
+                                    placeholder={`Answer ${index + 1}`}
+                                    value={ans.answer_text}
+                                    onChange={(e) => handleAnswerChange(index, "answer_text", e.target.value)}
+                                    required
+                                />
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={ans.is_correct}
+                                        onChange={(e) => handleAnswerChange(index, "is_correct", e.target.checked)}
+                                    />
+                                    Correct
+                                </label>
+                                {answers.length > 2 && (
+                                    <button type="button" onClick={() => removeAnswer(index)}>
+                                        Remove
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                        {answers.length < 4 && (
+                            <button type="button" onClick={addAnswer}>
+                                Add Answer
                             </button>
                         )}
-                    </div>
-                ))}
-                {answers.length < 4 && (
-                    <button type="button" onClick={addAnswer}>
-                        Add Answer
-                    </button>
-                )}
 
-                {error && <p style={{ color: "red" }}>{error}</p>}
+                        {error && <p style={{ color: "red" }}>{error}</p>}
 
-                <button type="submit" disabled={loading}>
-                    {loading ? "Creating..." : "Create Question"}
-                </button>
-            </form>
+                        <button type="submit" disabled={loading}>
+                            {loading ? "Creating..." : "Create Question"}
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
+
     );
 };
 

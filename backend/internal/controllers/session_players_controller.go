@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"backend/backend/internal/utils"
+	"backend/backend/internal/ws"
 	"net/http"
 	"strconv"
 	"time"
@@ -106,15 +108,23 @@ func (s *SessionPlayersController) Get(c *gin.Context) {
 }
 
 func (s *SessionPlayersController) Delete(c *gin.Context) {
-	id, received := c.Get("user_id")
-	if !received {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+	//TODO finish this method
+
+	conn, err := ws.Upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		// TODO log the error
 		return
 	}
 
-	userID, ok := id.(int64)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user_id"})
+	token, err := c.Cookie("session_token")
+	if err != nil {
+		conn.WriteJSON(gin.H{"error": "missing auth cookie"})
+		return
+	}
+
+	userID, err := utils.ValidateToken(token)
+	if err != nil {
+		conn.WriteJSON(gin.H{"error": "invalid token"})
 		return
 	}
 
