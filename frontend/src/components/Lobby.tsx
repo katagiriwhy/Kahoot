@@ -23,6 +23,7 @@ const Lobby = () => {
         const socket = new WebSocket(wsUrl);
         wsRef.current = socket;
 
+
         socket.onopen = () => {
             console.log("WS OPEN");
             socket.send(JSON.stringify(Number(id))); // ← только число
