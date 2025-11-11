@@ -90,6 +90,16 @@ func (g *GameSessionController) Create(c *gin.Context) {
 }
 
 func (g *GameSessionController) Join(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing token"})
+		return
+	}
+	userID, err := utils.ValidateToken(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+		return
+	}
 
 	conn, err := ws.Upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -97,29 +107,20 @@ func (g *GameSessionController) Join(c *gin.Context) {
 		return
 	}
 
-	token, err := c.Cookie("session_token")
-	if err != nil {
-		conn.WriteJSON(gin.H{"error": "missing auth cookie"})
+	type JoinMsg struct {
+		Type      string `json:"type"`
+		SessionID int64  `json:"session_id"`
+	}
+	var msg JoinMsg
+	if err := conn.ReadJSON(&msg); err != nil {
+		conn.WriteJSON(gin.H{"error": "invalid join message"})
 		return
 	}
-
-	userID, err := utils.ValidateToken(token)
-	if err != nil {
-		conn.WriteJSON(gin.H{"error": "invalid token"})
+	if msg.Type != "join" || msg.SessionID <= 0 {
+		conn.WriteJSON(gin.H{"error": "invalid join data"})
 		return
 	}
-
-	var sessionId int64
-
-	if err := conn.ReadJSON(&sessionId); err != nil {
-		conn.WriteJSON(gin.H{"error": "invalid session id while joining lobby"})
-		return
-	}
-
-	if sessionId <= 0 {
-		conn.WriteJSON(gin.H{"error": "session id can't be negative or zero"})
-		return
-	}
+	sessionId := msg.SessionID
 
 	const query = `SELECT started_at, host_id FROM game_sessions WHERE id = $1`
 
@@ -128,22 +129,26 @@ func (g *GameSessionController) Join(c *gin.Context) {
 
 	err = g.db.QueryRow(c.Request.Context(), query, sessionId).Scan(&startedAt, &hostId)
 	if errors.Is(err, sql.ErrNoRows) {
-		conn.WriteJSON(gin.H{"error": "invalid session id"})
+		conn.WriteJSON(gin.H{"error": "invalid db request"})
 		return
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		conn.WriteJSON(gin.H{"error": "database error"})
 		return
 	}
 
 	if hostId == userID {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "host can't join session as a player"})
+		conn.WriteJSON(gin.H{"status": "joined_as_host"})
+		client := ws.NewClient(conn, sessionId, userID)
+		g.hub.Register <- client
+		go client.WritePump()
+		client.ReadPump(g.hub)
 		return
 	}
 
 	if startedAt != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "session already started"})
+		conn.WriteJSON(gin.H{"error": "session already started"})
 		return
 	}
 
@@ -151,7 +156,7 @@ func (g *GameSessionController) Join(c *gin.Context) {
 
 	err = g.db.QueryRow(c.Request.Context(), `SELECT username FROM users WHERE id = $1`, userID).Scan(&nickname)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		conn.WriteJSON(gin.H{"error": err.Error()})
 		return
 	}
 
@@ -160,7 +165,7 @@ func (g *GameSessionController) Join(c *gin.Context) {
 	_, err = g.db.Exec(c.Request.Context(), sessionQuery, sessionId, userID, nickname)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		conn.WriteJSON(gin.H{"error": err.Error()})
 		return
 	}
 

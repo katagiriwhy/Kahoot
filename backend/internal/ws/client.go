@@ -1,6 +1,8 @@
 package ws
 
 import (
+	"context"
+	"encoding/json"
 	"log"
 	"time"
 
@@ -63,27 +65,27 @@ func (c *Client) WritePump() {
 func (c *Client) ReadPump(hub *Hub) {
 	defer func() {
 		hub.Unregister <- c
-		if err := c.Conn.Close(); err != nil {
-			log.Println("close conn:", err)
-		}
+		c.Conn.Close()
 	}()
 
-	if err := c.Conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-		log.Println("set read deadline:", err)
-	}
+	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error {
-		if err := c.Conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-			log.Println("set read deadline:", err)
-		}
+		c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
 
 	for {
-		_, _, err := c.Conn.ReadMessage()
+		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
-			if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-				log.Printf("unexpected close: %v", err)
-			}
+			break
+		}
+		var msg struct {
+			Type string `json:"type"`
+		}
+		if json.Unmarshal(message, &msg) == nil && msg.Type == "leave" {
+			hub.db.Exec(context.Background(),
+				`DELETE FROM session_players WHERE session_id=$1 AND user_id=$2`,
+				c.SessionID, c.UserID)
 			break
 		}
 	}

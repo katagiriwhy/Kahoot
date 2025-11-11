@@ -33,10 +33,12 @@ function Login() {
 
             // Добавляем withCredentials
             const response = await api.post(LOGIN_URL, formData, {
-                withCredentials: true, // ✅ важно для cookie
+                withCredentials: true,
             });
 
-            // Если сервер возвращает данные (например userId или имя), можно их сохранить в state
+            localStorage.setItem("token", response.data.token || "");
+            navigate("/");
+
             console.log("✅ Login successful!", response.data);
 
             navigate("/"); // Перенаправляем на главную или лобби

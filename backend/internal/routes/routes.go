@@ -10,9 +10,12 @@ import (
 
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Writer.Header().Set(
+			"Access-Control-Allow-Headers",
+			"Content-Type, Authorization, X-Requested-With",
+		)
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		if c.Request.Method == "OPTIONS" {
@@ -60,13 +63,17 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 		answers.GET("/:id", con.AnswerController.Get)
 	}
 
-	sessions := auth.Group("/ws/game-sessions")
+	wsGroup := router.Group("/ws/game-sessions")
+	{
+		wsGroup.GET("/join", con.GameSessionController.Join)
+	}
+
+	sessions := auth.Group("/game-sessions")
 	{
 		sessions.POST("", con.GameSessionController.Create)
 		sessions.POST("/start", con.GameSessionController.Start)
 		sessions.POST("/end", con.GameSessionController.End)
 		sessions.GET("/:id/players", con.SessionPlayersController.Get)
-		sessions.GET("/join", con.GameSessionController.Join)
 		sessions.DELETE("/:id/players", con.SessionPlayersController.Delete)
 		sessions.DELETE("/:id", con.GameSessionController.Delete)
 	}

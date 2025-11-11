@@ -112,17 +112,19 @@ func (con *UserController) Login(c *gin.Context) {
 		return
 	}
 
+	c.SetSameSite(http.SameSiteNoneMode)
 	c.SetCookie(
 		"session_token",
 		token,
-		60*60*24,
+		3600,
 		"/",
-		"",
-		false,
+		"localhost",
+		true,
 		true,
 	)
 
 	c.JSON(http.StatusOK, gin.H{
 		"user_id": userID,
+		"token":   token,
 	})
 }

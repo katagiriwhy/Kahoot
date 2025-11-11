@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {useEffect, useRef, useState} from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 
 type Player = {
@@ -10,50 +10,62 @@ const Lobby = () => {
     const { id } = useParams<{ id: string }>();
     const location = useLocation();
     const navigate = useNavigate();
-    const [,setWs] = useState<WebSocket | null>(null);
+   // const [,setWs] = useState<WebSocket | null>(null);
     const [players, setPlayers] = useState<Player[]>([]);
     const [isHost] = useState(location.state?.isHost ?? false);
+    const wsRef = useRef<WebSocket | null >(null);
 
     useEffect(() => {
-        const socket = new WebSocket("ws://localhost:8080/ws/game-sessions/join");
+        const token = localStorage.getItem("token");
+        if (!token) { navigate("/login"); return; }
+
+        const wsUrl = `ws://localhost:8080/ws/game-sessions/join?token=${encodeURIComponent(token)}`;
+        const socket = new WebSocket(wsUrl);
+        wsRef.current = socket;
 
         socket.onopen = () => {
-            console.log("WebSocket connected");
-            socket.send(JSON.stringify(Number(id)));
+            console.log("WS OPEN");
+            socket.send(JSON.stringify(Number(id))); // ← только число
         };
 
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.players) setPlayers(data.players);
-            if (data.status === "joined") console.log("Joined lobby");
+        socket.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if (data.type === "lobby_update" && Array.isArray(data.players)) {
+                setPlayers(data.players.map((p: { nickname: any; }) => ({ user_id: 0, nickname: p.nickname })));
+            }
         };
 
-        socket.onclose = () => console.log("WebSocket closed");
-        socket.onerror = (err) => console.error(err);
-
-        setWs(socket);
+        socket.onerror = (e) => console.error("WS ERROR:", e);
+        socket.onclose = (ev) => console.log("WS CLOSE:", ev.code, ev.reason);
 
         return () => socket.close();
-    }, [id]);
+    }, [id, navigate]);
 
-    const startGame = () => {
-        fetch("http://localhost:8080/ws/game-sessions/start", {
+    const startGame = async () => {
+        const token = localStorage.getItem("token");
+        await fetch("http://localhost:8080/ws/game-sessions/start", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+            },
             body: JSON.stringify({ session_id: Number(id) }),
-        }).then(() => console.log("Game started"));
+        });
     };
 
-    const endLobby = () => {
-        fetch(`http://localhost:8080/ws/game-sessions/${id}`, {
+    const endLobby = async () => {
+        const token = localStorage.getItem("token");
+        await fetch(`http://localhost:8080/ws/game-sessions/${id}`, {
             method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` },
         }).then(() => navigate("/"));
     };
 
     const leaveLobby = () => {
-        fetch(`http://localhost:8080/ws/game-sessions/${id}/players`, {
-            method: "DELETE",
-        }).then(() => navigate("/"));
+        if (wsRef.current) {
+            wsRef.current.send(JSON.stringify({ type: "leave", session_id: Number(id) }));
+        }
+        navigate("/");
     };
 
     return (

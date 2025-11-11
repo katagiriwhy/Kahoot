@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"backend/backend/internal/utils"
-	"backend/backend/internal/ws"
 	"net/http"
 	"strconv"
 	"time"
@@ -110,21 +109,15 @@ func (s *SessionPlayersController) Get(c *gin.Context) {
 func (s *SessionPlayersController) Delete(c *gin.Context) {
 	//TODO finish this method
 
-	conn, err := ws.Upgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		// TODO log the error
-		return
-	}
-
 	token, err := c.Cookie("session_token")
 	if err != nil {
-		conn.WriteJSON(gin.H{"error": "missing auth cookie"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing auth cookie"})
 		return
 	}
 
 	userID, err := utils.ValidateToken(token)
 	if err != nil {
-		conn.WriteJSON(gin.H{"error": "invalid token"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid token"})
 		return
 	}
 
@@ -140,12 +133,12 @@ func (s *SessionPlayersController) Delete(c *gin.Context) {
 		`SELECT started_at FROM game_sessions WHERE id = $1`, sessionID,
 	).Scan(&startedAt)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if startedAt != nil {
-		c.JSON(400, gin.H{"error": "session started_at cannot be set"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "session started_at cannot be set"})
 		return
 	}
 
@@ -155,11 +148,11 @@ func (s *SessionPlayersController) Delete(c *gin.Context) {
 		sessionID, userID,
 	).Scan(&inSession)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "db error"})
 		return
 	}
 	if !inSession {
-		c.JSON(http.StatusForbidden, gin.H{"error": "you are not in this session"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "you are not in this session"})
 		return
 	}
 
@@ -167,12 +160,12 @@ func (s *SessionPlayersController) Delete(c *gin.Context) {
 
 	rows, err := s.db.Exec(c.Request.Context(), query, sessionID, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if affected := rows.RowsAffected(); affected != 1 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "affected rows not match"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "affected rows not match"})
 		return
 	}
 
