@@ -7,7 +7,7 @@ import { NEW_QUIZ_URL } from '../components/Api';
 function NewQuiz() {
 
     const [questions, setQuestions] = useState([
-        { question: '', isCorrect: true }
+        { question: '', correctVariant: 0, variants: [''] }
     ]);
 
     const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -24,7 +24,13 @@ function NewQuiz() {
     };
 
     const addQuestion = () => {
-        setQuestions([...questions, { question: '', isCorrect: true }]);
+        setQuestions([...questions, { question: '', correctVariant: 0, variants: [''] }]);
+    };
+
+    const addVariant = (questionIndex: number) => {
+        const newQuestions = [...questions];
+        newQuestions[questionIndex].variants.push('');
+        setQuestions(newQuestions);
     };
 
     const removeQuestion = (index: number) => {
@@ -34,27 +40,48 @@ function NewQuiz() {
         }
     };
 
+    const removeVariant = (questionIndex: number) => {
+        const newQuestions = [...questions];
+        newQuestions[questionIndex].variants.pop();
+        setQuestions(newQuestions);
+    }
+
     const handleQuestionChange = (index: number, value: string) => {
         const newQuestions = [...questions];
         newQuestions[index].question = value;
         setQuestions(newQuestions);
     };
 
-    const handleCorrectnessChange = (index: number, value: string) => {
+    const handleVariantChange = (index: number, id: number, value: string) => {
         const newQuestions = [...questions];
-        newQuestions[index].isCorrect = value === 'true';
+        newQuestions[index].variants[id] = value;
+        setQuestions(newQuestions);
+    }
+
+    const handleCorrectnessChange = (index: number, value: number) => {
+        const newQuestions = [...questions];
+        newQuestions[index].correctVariant = value;
         setQuestions(newQuestions);
     };
 
     return (
         <>
-            <form className="newquizform" onSubmit={handleSubmit}>
+            <form className="newQuizForm" onSubmit={handleSubmit}>
                 {questions.map((item, index) => (
-                    <div key={index} className="question-item">
+                    <div key={index} className="questionItem">
                         <input type="text" placeholder={`Question ${index + 1}`} value={item.question} onChange={(e) => handleQuestionChange(index, e.target.value)} required />
-                        <select value={item.isCorrect.toString()} onChange={(e) => handleCorrectnessChange(index, e.target.value)}>
-                            <option value={"true"}>True</option>
-                            <option value={"false"}>False</option>
+                        <button type="button" onClick={() => addVariant(index)}>Add variant</button>
+                        {questions[index].variants.length > 1 && <button type="button" onClick={() => removeVariant(index)}>Remove variant</button>}
+                        {questions[index].variants.map((variant, id) => (
+                            <div key={id} className="questionVariants">
+                                <input type="text" placeholder={`Variant ${id + 1}`} value={variant} onChange={(e) => handleVariantChange(index, id, e.target.value)} required />
+                            </div>
+                        ))}
+                        <label htmlFor="correctVar">Correct Variant:</label>
+                        <select id="correctVar" value={item.correctVariant} onChange={(e) => handleCorrectnessChange(index, Number(e.target.value))}>
+                            {item.variants.map((_, index) => (
+                                <option key={index} value={index}>Variant {index + 1}</option>
+                            ))}
                         </select>
                         {questions.length > 1 && (<button type="button" onClick={() => removeQuestion(index)}>Delete</button>)}
                     </div>
