@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 
-import axios from './Api';
-import { NEW_QUIZ_URL } from './Api';
+import axios from '../components/Api';
+import { NEW_QUIZ_URL } from '../components/Api';
 
 function NewQuiz() {
 

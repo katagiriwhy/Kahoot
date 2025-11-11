@@ -1,8 +1,8 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
-import axios from './Api';
-import { REGISTER_URL } from './Api';
+import axios from '../components/Api';
+import { REGISTER_URL } from '../components/Api';
 
 function Register() {
     const [formData, setFormData] = useState({

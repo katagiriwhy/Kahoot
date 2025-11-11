@@ -1,8 +1,8 @@
 import { useState } from "react"
 import type { ChangeEvent, FormEvent } from "react";
 
-import axios from "./Api";
-import { JOIN_URL, CREATE_URL } from './Api';
+import axios from "../components/Api";
+import { JOIN_URL, CREATE_URL } from '../components/Api';
 
 function Home() {
 

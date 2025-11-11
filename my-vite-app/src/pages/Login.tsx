@@ -1,8 +1,8 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
-import axios from './Api';
-import { LOGIN_URL } from './Api';
+import axios from '../components/Api';
+import { LOGIN_URL } from '../components/Api';
 
 function Login() {
 

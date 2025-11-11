@@ -1,10 +1,6 @@
 import './App.css'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Register from './components/Register'
-import Login from './components/Login'
-import NewQuiz from './components/NewQuiz';
-import TempHome from './components/TempHome';
-import Home from './components/Home';
+import { Home, Login, Register, NewQuiz, TempHome } from './pages';
 
 function App() {
 
