@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 
 import axios from '../components/Api';
 import { NEW_QUIZ_URL } from '../components/Api';
+import Variant from '../components/NewQuiz/Variant';
 
 function NewQuiz() {
 
@@ -72,11 +73,7 @@ function NewQuiz() {
                         <input type="text" placeholder={`Question ${index + 1}`} value={item.question} onChange={(e) => handleQuestionChange(index, e.target.value)} required />
                         <button type="button" onClick={() => addVariant(index)}>Add variant</button>
                         {questions[index].variants.length > 1 && <button type="button" onClick={() => removeVariant(index)}>Remove variant</button>}
-                        {questions[index].variants.map((variant, id) => (
-                            <div key={id} className="questionVariants">
-                                <input type="text" placeholder={`Variant ${id + 1}`} value={variant} onChange={(e) => handleVariantChange(index, id, e.target.value)} required />
-                            </div>
-                        ))}
+                        <Variant variants={item.variants} onVariantChange={(variantIndex, value) => handleVariantChange(index, variantIndex, value)} />
                         <label htmlFor="correctVar">Correct Variant:</label>
                         <select id="correctVar" value={item.correctVariant} onChange={(e) => handleCorrectnessChange(index, Number(e.target.value))}>
                             {item.variants.map((_, index) => (
