@@ -77,5 +77,6 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 		sessions.DELETE("/:id/players", con.SessionPlayersController.Delete)
 		sessions.DELETE("/:id", con.GameSessionController.Delete)
 	}
+
 	return router
 }
