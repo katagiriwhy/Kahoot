@@ -3,7 +3,7 @@ services:
     container_name: go_app
     build: .
     environment:
-      PORT: ":8080"
+      PORT: "0.0.0.0:8080"
       DATABASE_URL: "postgres://postgres:postgres@db:5432/postgres?sslmode=disable"
       JWT_SECRET: "kahoot2005"
     ports:

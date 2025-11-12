@@ -20,7 +20,7 @@ const Lobby = () => {
         const token = localStorage.getItem("token");
         if (!token) { navigate("/login"); return; }
 
-        const wsUrl = `ws://localhost:8080/ws/game-sessions/join?token=${encodeURIComponent(token)}`;
+        const wsUrl = `ws://172.20.10.3:8080/ws/game-sessions/join?token=${encodeURIComponent(token)}`;
         const socket = new WebSocket(wsUrl);
         wsRef.current = socket;
 

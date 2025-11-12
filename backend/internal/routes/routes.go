@@ -10,7 +10,7 @@ import (
 
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://172.20.10.3:5173")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set(
 			"Access-Control-Allow-Headers",

@@ -9,7 +9,7 @@ export const CREATE_QUESTION_URL = '/questions';
 export const CREATE_QUESTION_WITH_ANSWERS_URL = '/questions/answers';
 
 const api = axios.create({
-    baseURL: "http://localhost:8080",
+    baseURL: "http://172.20.10.3:8080",
 });
 
 api.interceptors.request.use((config) => {
