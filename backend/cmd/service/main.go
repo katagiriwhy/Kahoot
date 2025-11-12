@@ -1,8 +1,6 @@
 package main
 
-import (
-	"backend/backend/internal/application"
-)
+import "backend/backend/internal/application"
 
 func main() {
 	a := application.NewApplication()

@@ -5,6 +5,7 @@ import (
 	"backend/backend/internal/ws"
 	"database/sql"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -92,42 +93,44 @@ func (g *GameSessionController) Create(c *gin.Context) {
 func (g *GameSessionController) Join(c *gin.Context) {
 	token := c.Query("token")
 	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing token"})
+		log.Println("token required")
 		return
 	}
 	userID, err := utils.ValidateToken(token)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+		log.Println("cannot validate token")
 		return
 	}
 
 	conn, err := ws.Upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		// TODO log the error
+		log.Println(err)
+		log.Println("failed to upgrade connection")
 		return
 	}
 
 	type JoinMsg struct {
-		Type      string `json:"type"`
-		SessionID int64  `json:"session_id"`
+		// Type      string `json:"type"`
+		SessionID int64 `json:"session_id"`
 	}
 	var msg JoinMsg
 	if err := conn.ReadJSON(&msg); err != nil {
 		conn.WriteJSON(gin.H{"error": "invalid join message"})
 		return
 	}
-	if msg.Type != "join" || msg.SessionID <= 0 {
+	// msg.Type != "join" ||
+	if msg.SessionID <= 0 {
 		conn.WriteJSON(gin.H{"error": "invalid join data"})
 		return
 	}
-	sessionId := msg.SessionID
 
 	const query = `SELECT started_at, host_id FROM game_sessions WHERE id = $1`
 
 	var startedAt *time.Time
 	var hostId int64
 
-	err = g.db.QueryRow(c.Request.Context(), query, sessionId).Scan(&startedAt, &hostId)
+	err = g.db.QueryRow(c.Request.Context(), query, msg.SessionID).Scan(&startedAt, &hostId)
 	if errors.Is(err, sql.ErrNoRows) {
 		conn.WriteJSON(gin.H{"error": "invalid db request"})
 		return
@@ -138,17 +141,17 @@ func (g *GameSessionController) Join(c *gin.Context) {
 		return
 	}
 
-	if hostId == userID {
-		conn.WriteJSON(gin.H{"status": "joined_as_host"})
-		client := ws.NewClient(conn, sessionId, userID)
-		g.hub.Register <- client
-		go client.WritePump()
-		client.ReadPump(g.hub)
+	if startedAt != nil {
+		conn.WriteJSON(gin.H{"error": "session already started"})
 		return
 	}
 
-	if startedAt != nil {
-		conn.WriteJSON(gin.H{"error": "session already started"})
+	if hostId == userID {
+		conn.WriteJSON(gin.H{"status": "joined_as_host"})
+		client := ws.NewClient(conn, msg.SessionID, userID)
+		g.hub.Register <- client
+		go client.WritePump()
+		client.ReadPump(g.hub)
 		return
 	}
 
@@ -162,7 +165,7 @@ func (g *GameSessionController) Join(c *gin.Context) {
 
 	const sessionQuery = `INSERT INTO session_players (session_id, user_id, nickname) VALUES ($1, $2, $3) ON CONFLICT (session_id, user_id) DO NOTHING`
 
-	_, err = g.db.Exec(c.Request.Context(), sessionQuery, sessionId, userID, nickname)
+	_, err = g.db.Exec(c.Request.Context(), sessionQuery, msg.SessionID, userID, nickname)
 
 	if err != nil {
 		conn.WriteJSON(gin.H{"error": err.Error()})
@@ -170,7 +173,7 @@ func (g *GameSessionController) Join(c *gin.Context) {
 	}
 
 	conn.WriteJSON(gin.H{"status": "joined"})
-	client := ws.NewClient(conn, sessionId, userID)
+	client := ws.NewClient(conn, msg.SessionID, userID)
 	g.hub.Register <- client
 	go client.WritePump()
 	client.ReadPump(g.hub)

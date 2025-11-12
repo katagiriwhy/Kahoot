@@ -16,6 +16,7 @@ const Lobby = () => {
     const wsRef = useRef<WebSocket | null >(null);
 
     useEffect(() => {
+        if (wsRef.current) return;
         const token = localStorage.getItem("token");
         if (!token) { navigate("/login"); return; }
 
@@ -26,18 +27,26 @@ const Lobby = () => {
 
         socket.onopen = () => {
             console.log("WS OPEN");
-            socket.send(JSON.stringify(Number(id))); // ← только число
+            console.log(Number(id));
+            socket.send(JSON.stringify({session_id: Number(id)}));
         };
 
         socket.onmessage = (e) => {
             const data = JSON.parse(e.data);
             if (data.type === "lobby_update" && Array.isArray(data.players)) {
-                setPlayers(data.players.map((p: { nickname: any; }) => ({ user_id: 0, nickname: p.nickname })));
+                setPlayers(data.players.map((p: { id : string, nickname: string; }) => ({ user_id: Number(p.id), nickname: p.nickname })));
             }
         };
 
         socket.onerror = (e) => console.error("WS ERROR:", e);
-        socket.onclose = (ev) => console.log("WS CLOSE:", ev.code, ev.reason);
+        socket.onclose = function(event) {
+            if (event.wasClean) {
+                console.log('Соединение закрыто чисто');
+            } else {
+                console.log('Обрыв соединения'); // например, "убит" процесс сервера
+            }
+            console.log('Код: ' + event.code + ' причина: ' + event.reason);
+        };
 
         return () => socket.close();
     }, [id, navigate]);

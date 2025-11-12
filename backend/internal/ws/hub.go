@@ -20,6 +20,7 @@ var Upgrader = websocket.Upgrader{
 }
 
 type Player struct {
+	Id       string `json:"id"`
 	Nickname string `json:"nickname"`
 }
 
@@ -40,7 +41,7 @@ func NewClient(conn *websocket.Conn, sessionId int64, userId int64) *Client {
 }
 
 type Hub struct {
-	Clients    map[int64]map[*Client]bool
+	Clients    map[int64]map[*Client]struct{}
 	Register   chan *Client
 	Unregister chan *Client
 	mu         *sync.RWMutex
@@ -49,7 +50,7 @@ type Hub struct {
 
 func NewHub(db *pgxpool.Pool) *Hub {
 	return &Hub{
-		Clients:    make(map[int64]map[*Client]bool),
+		Clients:    make(map[int64]map[*Client]struct{}),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
 		mu:         &sync.RWMutex{},
@@ -71,9 +72,9 @@ func (h *Hub) Run() {
 func (h *Hub) registerClient(client *Client) {
 	h.mu.Lock()
 	if h.Clients[client.SessionID] == nil {
-		h.Clients[client.SessionID] = make(map[*Client]bool)
+		h.Clients[client.SessionID] = make(map[*Client]struct{})
 	}
-	h.Clients[client.SessionID][client] = true
+	h.Clients[client.SessionID][client] = struct{}{}
 	h.mu.Unlock()
 
 	h.BroadcastLobby(client.SessionID)
@@ -134,7 +135,7 @@ func (h *Hub) BroadcastLobby(sessionId int64) {
 }
 
 func (h *Hub) getPlayers(sessionId int64) ([]Player, error) {
-	const query = `SELECT nickname FROM session_players WHERE session_id = $1 ORDER BY joined_at DESC`
+	const query = `SELECT id, nickname FROM session_players WHERE session_id = $1 ORDER BY joined_at DESC`
 
 	rows, err := h.db.Query(context.Background(), query, sessionId)
 
@@ -149,7 +150,7 @@ func (h *Hub) getPlayers(sessionId int64) ([]Player, error) {
 	for rows.Next() {
 		var player Player
 
-		if err := rows.Scan(&player.Nickname); err != nil {
+		if err := rows.Scan(&player.Id, &player.Nickname); err != nil {
 			log.Println(err)
 		}
 		players = append(players, player)

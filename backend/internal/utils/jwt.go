@@ -12,7 +12,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-var secretKey = []byte(os.Getenv("SECRET_KEY"))
+var secretKey = []byte(os.Getenv("JWT_SECRET"))
 
 func GenerateToken(userId int64) (string, error) {
 	claims := Claims{
