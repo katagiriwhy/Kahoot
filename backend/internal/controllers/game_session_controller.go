@@ -116,11 +116,15 @@ func (g *GameSessionController) Join(c *gin.Context) {
 	var msg Message
 	if err := conn.ReadJSON(&msg); err != nil {
 		conn.WriteJSON(gin.H{"error": "invalid join message"})
+		time.Sleep(100 * time.Millisecond)
+		conn.Close()
 		return
 	}
 	// msg.Type != "join" ||
 	if msg.SessionID <= 0 || msg.Type == "" {
 		conn.WriteJSON(gin.H{"error": "invalid join data"})
+		time.Sleep(100 * time.Millisecond)
+		conn.Close()
 		return
 	}
 
@@ -132,16 +136,22 @@ func (g *GameSessionController) Join(c *gin.Context) {
 	err = g.db.QueryRow(c.Request.Context(), query, msg.SessionID).Scan(&startedAt, &hostId)
 	if errors.Is(err, sql.ErrNoRows) {
 		conn.WriteJSON(gin.H{"error": "invalid db request"})
+		time.Sleep(100 * time.Millisecond)
+		conn.Close()
 		return
 	}
 
 	if err != nil {
 		conn.WriteJSON(gin.H{"error": "database error"})
+		time.Sleep(100 * time.Millisecond)
+		conn.Close()
 		return
 	}
 
 	if startedAt != nil {
 		conn.WriteJSON(gin.H{"error": "session already started"})
+		time.Sleep(100 * time.Millisecond)
+		conn.Close()
 		return
 	}
 
@@ -159,6 +169,8 @@ func (g *GameSessionController) Join(c *gin.Context) {
 	err = g.db.QueryRow(c.Request.Context(), `SELECT username FROM users WHERE id = $1`, userID).Scan(&nickname)
 	if err != nil {
 		conn.WriteJSON(gin.H{"error": err.Error()})
+		time.Sleep(100 * time.Millisecond)
+		conn.Close()
 		return
 	}
 
@@ -169,6 +181,8 @@ func (g *GameSessionController) Join(c *gin.Context) {
 
 	if err != nil {
 		conn.WriteJSON(gin.H{"error": err.Error()})
+		time.Sleep(100 * time.Millisecond)
+		conn.Close()
 		return
 	}
 
@@ -319,7 +333,7 @@ func (g *GameSessionController) End(c *gin.Context) {
 		return
 	}
 
-	g.hub.CloseLobby(sessionId)
+	go g.hub.CloseLobby(sessionId)
 
 	c.JSON(http.StatusOK, gin.H{"status": "lobby_closed"})
 }

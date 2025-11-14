@@ -15,6 +15,22 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 )
 
+type Client struct {
+	Conn      *websocket.Conn
+	Send      chan []byte
+	SessionID int64
+	UserID    int64
+}
+
+func NewClient(conn *websocket.Conn, sessionId int64, userId int64) *Client {
+	return &Client{
+		Conn:      conn,
+		Send:      make(chan []byte, 256),
+		SessionID: sessionId,
+		UserID:    userId,
+	}
+}
+
 func (c *Client) WritePump() {
 	log.Printf("[WritePump] start user=%d session=%d", c.UserID, c.SessionID)
 	ticker := time.NewTicker(pingPeriod)
@@ -25,6 +41,7 @@ func (c *Client) WritePump() {
 		if err := c.Conn.Close(); err != nil {
 			log.Println("close conn:", err)
 		}
+		log.Printf("[WritePump] STOP user=%d session=%d", c.UserID, c.SessionID)
 	}()
 
 	for {
@@ -59,13 +76,13 @@ func (c *Client) WritePump() {
 					}
 					w.Write(msg)
 				default:
+					if err := w.Close(); err != nil {
+						log.Println("close writer:", err)
+					}
 					break drain
 				}
 			}
 
-			if err := w.Close(); err != nil {
-				log.Println("close writer:", err)
-			}
 		case <-ticker.C:
 			if err := c.Conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 				return

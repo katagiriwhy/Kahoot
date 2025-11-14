@@ -24,22 +24,6 @@ type Player struct {
 	Nickname string `json:"nickname"`
 }
 
-type Client struct {
-	Conn      *websocket.Conn
-	Send      chan []byte
-	SessionID int64
-	UserID    int64
-}
-
-func NewClient(conn *websocket.Conn, sessionId int64, userId int64) *Client {
-	return &Client{
-		Conn:      conn,
-		Send:      make(chan []byte),
-		SessionID: sessionId,
-		UserID:    userId,
-	}
-}
-
 type Hub struct {
 	Clients    map[int64]map[*Client]struct{}
 	Register   chan *Client
@@ -86,6 +70,7 @@ func (h *Hub) unregisterClient(client *Client) {
 		if _, ok := clients[client]; ok {
 			delete(clients, client)
 			close(client.Send)
+			log.Printf("[Hub] unregistered user=%d session=%d", client.UserID, client.SessionID)
 			if len(clients) == 0 {
 				delete(h.Clients, client.SessionID)
 			}
@@ -95,25 +80,22 @@ func (h *Hub) unregisterClient(client *Client) {
 	h.BroadcastLobby(client.SessionID)
 }
 
-func (h *Hub) CloseLobby(sessionId int64) {
-	h.mu.Lock()
-	clients, ok := h.Clients[sessionId]
+func (h *Hub) CloseLobby(sessionID int64) {
+	h.mu.RLock()
+	clients, ok := h.Clients[sessionID]
+	h.mu.RUnlock()
 	if !ok {
-		h.mu.Unlock()
 		return
 	}
-	h.mu.Unlock()
-
-	msg := []byte(`{"type": "lobby_closed"}`)
 
 	for client := range clients {
-		client.Send <- msg
-		client.Conn.Close()
-		close(client.Send)
+		select {
+		case client.Send <- []byte(`{"type":"lobby_closed"}`):
+		default:
+		}
+
+		h.Unregister <- client
 	}
-	h.mu.Lock()
-	delete(h.Clients, sessionId)
-	h.mu.Unlock()
 }
 
 func (h *Hub) BroadcastLobby(sessionId int64) {
@@ -147,10 +129,7 @@ func (h *Hub) BroadcastLobby(sessionId int64) {
 		select {
 		case client.Send <- data:
 		default:
-			h.mu.Lock()
-			delete(h.Clients[client.SessionID], client)
-			close(client.Send)
-			h.mu.Unlock()
+			h.Unregister <- client
 		}
 	}
 }
