@@ -104,23 +104,22 @@ func (g *GameSessionController) Join(c *gin.Context) {
 
 	conn, err := ws.Upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		// TODO log the error
 		log.Println(err)
 		log.Println("failed to upgrade connection")
 		return
 	}
 
-	type JoinMsg struct {
-		// Type      string `json:"type"`
-		SessionID int64 `json:"session_id"`
+	type Message struct {
+		Type      string `json:"type"`
+		SessionID int64  `json:"session_id"`
 	}
-	var msg JoinMsg
+	var msg Message
 	if err := conn.ReadJSON(&msg); err != nil {
 		conn.WriteJSON(gin.H{"error": "invalid join message"})
 		return
 	}
 	// msg.Type != "join" ||
-	if msg.SessionID <= 0 {
+	if msg.SessionID <= 0 || msg.Type == "" {
 		conn.WriteJSON(gin.H{"error": "invalid join data"})
 		return
 	}
@@ -146,7 +145,7 @@ func (g *GameSessionController) Join(c *gin.Context) {
 		return
 	}
 
-	if hostId == userID {
+	if hostId == userID && msg.Type == "joined" {
 		conn.WriteJSON(gin.H{"status": "joined_as_host"})
 		client := ws.NewClient(conn, msg.SessionID, userID)
 		g.hub.Register <- client
@@ -163,7 +162,8 @@ func (g *GameSessionController) Join(c *gin.Context) {
 		return
 	}
 
-	const sessionQuery = `INSERT INTO session_players (session_id, user_id, nickname) VALUES ($1, $2, $3) ON CONFLICT (session_id, user_id) DO NOTHING`
+	const sessionQuery = `INSERT INTO session_players (session_id, user_id, nickname) VALUES ($1, $2, $3) ON CONFLICT (session_id, user_id) 
+		DO UPDATE SET joined_at = NOW(), nickname = EXCLUDED.nickname`
 
 	_, err = g.db.Exec(c.Request.Context(), sessionQuery, msg.SessionID, userID, nickname)
 
@@ -274,22 +274,18 @@ func (g *GameSessionController) End(c *gin.Context) {
 		return
 	}
 
-	var input struct {
-		SessionId int64 `json:"session_id" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&input); err != nil {
+	sessionIdStr := c.Param("id")
+
+	sessionId, err := strconv.ParseInt(sessionIdStr, 10, 64)
+	if err != nil || sessionId <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if input.SessionId <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "session_id must be positive"})
-		return
-	}
 	var hostID int64
 	var endedAt *time.Time
-	err := g.db.QueryRow(c.Request.Context(),
-		`SELECT host_id, ended_at FROM game_sessions WHERE id = $1`, input.SessionId,
+	err = g.db.QueryRow(c.Request.Context(),
+		`SELECT host_id, ended_at FROM game_sessions WHERE id = $1`, sessionId,
 	).Scan(&hostID, &endedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -309,9 +305,9 @@ func (g *GameSessionController) End(c *gin.Context) {
 		return
 	}
 
-	const query = `UPDATE game_sessions SET ended_at = NOW() WHERE id = $1 AND ended_at IS NULL`
+	const query = `DELETE FROM game_sessions WHERE id = $1 AND started_at IS NULL`
 
-	res, err := g.db.Exec(c.Request.Context(), query, input.SessionId)
+	res, err := g.db.Exec(c.Request.Context(), query, sessionId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -323,7 +319,9 @@ func (g *GameSessionController) End(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"ended": true})
+	g.hub.CloseLobby(sessionId)
+
+	c.JSON(http.StatusOK, gin.H{"status": "lobby_closed"})
 }
 
 func (g *GameSessionController) Delete(c *gin.Context) {
@@ -388,4 +386,34 @@ func (g *GameSessionController) Delete(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"deleted": true,
 		"session_id": sessionID})
+}
+
+func (g *GameSessionController) Exists(c *gin.Context) {
+	sessionIDStr := c.Param("id")
+	if sessionIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "session_id required"})
+		return
+	}
+
+	sessionID, err := strconv.ParseInt(sessionIDStr, 10, 64)
+	if err != nil || sessionID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session id"})
+		return
+	}
+
+	var exists bool
+	err = g.db.QueryRow(c.Request.Context(), `SELECT EXISTS(SELECT 1 FROM game_sessions WHERE id = $1)`, sessionID).Scan(&exists)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"exists": false})
+		return
+	}
+
+	if !exists {
+		c.JSON(http.StatusOK, gin.H{"exists": false})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"exists": true})
+
 }

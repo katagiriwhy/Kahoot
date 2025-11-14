@@ -28,13 +28,16 @@ const Lobby = () => {
         socket.onopen = () => {
             console.log("WS OPEN");
             console.log(Number(id));
-            socket.send(JSON.stringify({session_id: Number(id)}));
+            socket.send(JSON.stringify({type: "joined", session_id: Number(id)}));
         };
 
         socket.onmessage = (e) => {
             const data = JSON.parse(e.data);
             if (data.type === "lobby_update" && Array.isArray(data.players)) {
                 setPlayers(data.players.map((p: { id : string, nickname: string; }) => ({ user_id: Number(p.id), nickname: p.nickname })));
+            } else if (data.type === "lobby_closed") {
+                alert("Лобби было закрыто хостом");
+                navigate("/");
             }
         };
 
@@ -43,7 +46,7 @@ const Lobby = () => {
             if (event.wasClean) {
                 console.log('Соединение закрыто чисто');
             } else {
-                console.log('Обрыв соединения'); // например, "убит" процесс сервера
+                console.log('Обрыв соединения');
             }
             console.log('Код: ' + event.code + ' причина: ' + event.reason);
         };
@@ -53,7 +56,7 @@ const Lobby = () => {
 
     const startGame = async () => {
         const token = localStorage.getItem("token");
-        await fetch("http://localhost:8080/ws/game-sessions/start", {
+        await fetch("http://172.20.10.3:8080/game-sessions/start", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -65,9 +68,10 @@ const Lobby = () => {
 
     const endLobby = async () => {
         const token = localStorage.getItem("token");
-        await fetch(`http://localhost:8080/ws/game-sessions/${id}`, {
+        await fetch(`http://172.20.10.3:8080/game-sessions/${id}/end`, {
             method: "DELETE",
-            headers: { "Authorization": `Bearer ${token}` },
+            headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+            credentials: "include"
         }).then(() => navigate("/"));
     };
 

@@ -3,6 +3,7 @@ package routes
 import (
 	"backend/backend/internal/controllers"
 	"backend/backend/internal/middleware"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,16 +11,20 @@ import (
 
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://172.20.10.3:5173")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set(
-			"Access-Control-Allow-Headers",
-			"Content-Type, Authorization, X-Requested-With",
-		)
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		origin := c.Request.Header.Get("Origin")
+		log.Printf("CORS Origin: %s", origin)
+		if origin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			c.Writer.Header().Set(
+				"Access-Control-Allow-Headers",
+				"Content-Type, Authorization, X-Requested-With",
+			)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
 
 		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
+			c.AbortWithStatus(http.StatusOK)
 			return
 		}
 		c.Next()
@@ -72,8 +77,9 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 	{
 		sessions.POST("", con.GameSessionController.Create)
 		sessions.POST("/start", con.GameSessionController.Start)
-		sessions.POST("/end", con.GameSessionController.End)
+		sessions.DELETE("/:id/end", con.GameSessionController.End)
 		sessions.GET("/:id/players", con.SessionPlayersController.Get)
+		sessions.GET("/:id/exists", con.GameSessionController.Exists)
 		sessions.DELETE("/:id/players", con.SessionPlayersController.Delete)
 		sessions.DELETE("/:id", con.GameSessionController.Delete)
 	}

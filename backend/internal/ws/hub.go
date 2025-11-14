@@ -95,6 +95,27 @@ func (h *Hub) unregisterClient(client *Client) {
 	h.BroadcastLobby(client.SessionID)
 }
 
+func (h *Hub) CloseLobby(sessionId int64) {
+	h.mu.Lock()
+	clients, ok := h.Clients[sessionId]
+	if !ok {
+		h.mu.Unlock()
+		return
+	}
+	h.mu.Unlock()
+
+	msg := []byte(`{"type": "lobby_closed"}`)
+
+	for client := range clients {
+		client.Send <- msg
+		client.Conn.Close()
+		close(client.Send)
+	}
+	h.mu.Lock()
+	delete(h.Clients, sessionId)
+	h.mu.Unlock()
+}
+
 func (h *Hub) BroadcastLobby(sessionId int64) {
 	players, err := h.getPlayers(sessionId)
 	if err != nil {

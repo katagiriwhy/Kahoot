@@ -20,9 +20,18 @@ const Home = () => {
         }
     };
 
-    const handleJoinLobby = () => {
+    const handleJoinLobby = async () => {
         if (!joinSessionID) return;
-        navigate(`/lobby/${joinSessionID}`, { state: { isHost: false } });
+        try {
+            const res = await axios.get(`/game-sessions/${joinSessionID}/exists`);
+            if (!res.data.exists) {
+                setError(`Лобби с ID:${joinSessionID} не существует!`);
+                return
+            }
+            navigate(`/lobby/${joinSessionID}`, {state: {isHost : false}});
+        } catch (err: any) {
+            setError(err)
+        }
     };
 
     return (
