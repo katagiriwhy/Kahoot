@@ -60,6 +60,7 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 	{
 		questions.POST("", con.QuestionController.Create)
 		questions.POST("/answers", con.QuestionController.CreateWithAnswer)
+		questions.GET("/:id/image", con.QuestionController.GetImage)
 	}
 
 	answers := auth.Group("/answers")

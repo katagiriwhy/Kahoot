@@ -1,4 +1,5 @@
 CREATE TYPE quiz_difficulty AS ENUM ('Легкий', 'Средний', 'Сложный');
+CREATE TYPE game_state AS ENUM ('lobby', 'question', 'results', 'finished');
 
 CREATE TABLE IF NOT EXISTS public.users (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
@@ -26,7 +27,8 @@ CREATE TABLE IF NOT EXISTS public.questions (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     quiz_id       BIGINT NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
     question_text TEXT NOT NULL,
-    points INTEGER DEFAULT 100
+    points INTEGER DEFAULT 100,
+    image BYTEA
 );
 
 CREATE TABLE IF NOT EXISTS public.answers (
@@ -38,6 +40,9 @@ CREATE TABLE IF NOT EXISTS public.answers (
 
 CREATE TABLE IF NOT EXISTS public.game_sessions (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  state game_state NOT NULL DEFAULT 'lobby',
+  current_question INT,
+  question_started_at TIMESTAMP,
   host_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   quiz_id BIGINT NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
   started_at TIMESTAMP,
@@ -55,12 +60,18 @@ CREATE TABLE IF NOT EXISTS public.session_players (
 
 CREATE TABLE IF NOT EXISTS public.player_answers (
     id  BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    session_id BIGINT NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
     session_player_id BIGINT NOT NULL REFERENCES session_players(id) ON DELETE CASCADE,
-    question_id BIGINT NOT NULL REFERENCES questions(id),
-    selected_answer_id BIGINT NOT NULL REFERENCES answers(id),
+    question_id BIGINT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+    selected_answer_id BIGINT NOT NULL REFERENCES answers(id) ON DELETE CASCADE,
     is_correct BOOLEAN,
-    answered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    score_earned INTEGER DEFAULT 0
+    answered_at TIMESTAMP,
+    CONSTRAINT fk_player_answers_session_check
+    CHECK (
+              session_id = (
+              SELECT session_id FROM session_players WHERE id = session_player_id
+                           )
+    )
 );
 
 -- CREATE TABLE player_results (

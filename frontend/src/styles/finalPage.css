@@ -1,0 +1,90 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to bottom, #E0BBE4, #957DAD);
+    margin: 0;
+    padding: 0;
+}
+
+.final-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+}
+
+.final-container h1 {
+    font-size: 3rem;
+    color: #5B2C6F;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.results-table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 800px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    overflow: hidden;
+    border-radius: 10px;
+    background-color: #fff;
+}
+
+.results-table th, .results-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    font-size: 1.1rem;
+}
+
+.results-table th {
+    background-color: #D7BDE2;
+    color: #4A235A;
+}
+
+.results-table tr:nth-child(odd) {
+    background-color: #f9f9f9;
+}
+
+.results-table tr.rank-1 {
+    background-color: #FFD700;
+    font-weight: bold;
+}
+
+.results-table tr.rank-2 {
+    background-color: #C0C0C0;
+    font-weight: bold;
+}
+
+.results-table tr.rank-3 {
+    background-color: #FFA500;
+    font-weight: bold;
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.results-table tbody tr {
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+.pulse-text {
+    margin-top: 2rem;
+    font-size: 1.2rem;
+    color: #5B2C6F;
+    font-weight: 500;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}

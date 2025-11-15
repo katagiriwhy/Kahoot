@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AxiosError } from "axios";
-import api, {CREATE_QUESTION_WITH_ANSWERS_URL} from "./Api";
-import "../styles/createQuestions.css"
+import api, { CREATE_QUESTION_WITH_ANSWERS_URL } from "./Api";
+import "../styles/createQuestions.css";
 
 const CreateQuestions = () => {
     const [quizId, setQuizId] = useState("");
@@ -11,7 +11,8 @@ const CreateQuestions = () => {
         { answer_text: "", is_correct: false },
         { answer_text: "", is_correct: false },
     ]);
-    const [error, setError] = useState(null);
+    const [imageFile, setImageFile] = useState<File | null>(null); // новое поле
+    const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
     type Answer = {
@@ -47,17 +48,19 @@ const CreateQuestions = () => {
         setError(null);
 
         try {
-            const payload = {
-                quiz_id: Number(quizId),
-                question_text: questionText,
-                points: Number(points),
-                answers: answers.map((a) => ({
-                    answer_text: a.answer_text,
-                    is_correct: a.is_correct,
-                })),
-            };
+            const formData = new FormData();
+            formData.append("quiz_id", quizId);
+            formData.append("question_text", questionText);
+            formData.append("points", points.toString());
+            formData.append("answers", JSON.stringify(answers));
+            if (imageFile) {
+                formData.append("image", imageFile);
+            }
 
-            await api.post(CREATE_QUESTION_WITH_ANSWERS_URL, payload);
+            await api.post(CREATE_QUESTION_WITH_ANSWERS_URL, formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
             setQuizId("");
             setQuestionText("");
             setPoints(1);
@@ -65,6 +68,8 @@ const CreateQuestions = () => {
                 { answer_text: "", is_correct: false },
                 { answer_text: "", is_correct: false },
             ]);
+            setImageFile(null);
+
         } catch (err) {
             const axiosErr = err as AxiosError<any>;
             setError(axiosErr.response?.data?.error || "Error creating question");
@@ -87,6 +92,9 @@ const CreateQuestions = () => {
 
                         <label>Points</label>
                         <input type="number" min={1} value={points} onChange={(e) => setPoints(parseInt(e.target.value))} required />
+
+                        <label>Image (optional)</label>
+                        <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
 
                         <h3>Answers</h3>
                         {answers.map((ans, index) => (
@@ -128,7 +136,6 @@ const CreateQuestions = () => {
                 </div>
             </div>
         </div>
-
     );
 };
 

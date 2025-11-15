@@ -1,5 +1,7 @@
-import {useEffect, useRef, useState} from "react";
+import { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { useSocket } from "../context/SocketContext";
+import "../styles/lobby.css";
 
 type Player = {
     user_id: number;
@@ -10,75 +12,39 @@ const Lobby = () => {
     const { id } = useParams<{ id: string }>();
     const location = useLocation();
     const navigate = useNavigate();
-   // const [,setWs] = useState<WebSocket | null>(null);
+    const { socket, send } = useSocket();
+
     const [players, setPlayers] = useState<Player[]>([]);
     const [isHost] = useState(location.state?.isHost ?? false);
-    const wsRef = useRef<WebSocket | null >(null);
 
     useEffect(() => {
-        if (wsRef.current) return;
-        const token = localStorage.getItem("token");
-        if (!token) { navigate("/login"); return; }
+        if (!socket) return;
 
-        const wsUrl = `ws://172.20.10.3:8080/ws/game-sessions/join?token=${encodeURIComponent(token)}`;
-        const socket = new WebSocket(wsUrl);
-        wsRef.current = socket;
+        send("joined", { session_id: Number(id) });
 
-
-        socket.onopen = () => {
-            console.log("WS OPEN");
-            console.log(Number(id));
-            socket.send(JSON.stringify({type: "joined", session_id: Number(id)}));
+        const lobbyUpdateHandler = (data: { players: Player[] }) => {
+            setPlayers(data.players);
         };
+        socket.on("lobby_update", lobbyUpdateHandler);
 
-        socket.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-            if (data.type === "lobby_update" && Array.isArray(data.players)) {
-                setPlayers(data.players.map((p: { id : string, nickname: string; }) => ({ user_id: Number(p.id), nickname: p.nickname })));
-            } else if (data.type === "lobby_closed") {
-                alert("Лобби было закрыто хостом");
-                navigate("/");
-            }
+        // лобби было закрыто
+        const lobbyClosedHandler = () => {
+            alert("Лобби было закрыто хостом");
+            navigate("/");
         };
+        socket.on("lobby_closed", lobbyClosedHandler);
 
-        socket.onerror = (e) => console.error("WS ERROR:", e);
-        socket.onclose = function(event) {
-            if (event.wasClean) {
-                console.log('Соединение закрыто чисто');
-            } else {
-                console.log('Обрыв соединения');
-            }
-            console.log('Код: ' + event.code + ' причина: ' + event.reason);
+        return () => {
+            socket.off("lobby_update", lobbyUpdateHandler);
+            socket.off("lobby_closed", lobbyClosedHandler);
         };
+    }, [socket, id, send, navigate]);
 
-        return () => socket.close();
-    }, [id, navigate]);
-
-    const startGame = async () => {
-        const token = localStorage.getItem("token");
-        await fetch("http://172.20.10.3:8080/game-sessions/start", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
-            },
-            body: JSON.stringify({ session_id: Number(id) }),
-        });
-    };
-
-    const endLobby = async () => {
-        const token = localStorage.getItem("token");
-        await fetch(`http://172.20.10.3:8080/game-sessions/${id}/end`, {
-            method: "DELETE",
-            headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-            credentials: "include"
-        }).then(() => navigate("/"));
-    };
+    const startGame = () => send("start_game", { session_id: Number(id) });
+    const endLobby = () => send("end_lobby", { session_id: Number(id) });
 
     const leaveLobby = () => {
-        if (wsRef.current) {
-            wsRef.current.send(JSON.stringify({ type: "leave", session_id: Number(id) }));
-        }
+        send("leave", { session_id: Number(id) });
         navigate("/");
     };
 

@@ -48,18 +48,16 @@ func (q *QuizController) GetQuizImage(c *gin.Context) {
 
 	var imageData []byte
 
-	err = q.db.QueryRow(c, query, quizId).Scan(&imageData)
+	err = q.db.QueryRow(c.Request.Context(), query, quizId).Scan(&imageData)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "quiz not found"})
 		return
 	}
 
-	// TODO check if there is no image
-
-	//if len(imageData) == 0 {
-	//	c.JSON(http.StatusNotFound, gin.H{"error": "image is not found"})
-	//	return
-	//}
+	if len(imageData) == 0 {
+		c.Status(http.StatusNoContent)
+		return
+	}
 
 	contentType := http.DetectContentType(imageData)
 	c.Data(http.StatusOK, contentType, imageData)

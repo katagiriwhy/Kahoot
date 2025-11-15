@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"backend/backend/internal/types"
+	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,6 +38,7 @@ type QuestionsWithAnswers struct {
 	QuestionText string   `json:"question_text" binding:"required" db:"question_text"`
 	Points       int      `json:"points" binding:"required" db:"points"`
 	Answers      []Answer `json:"answers" binding:"required"`
+	Image        []byte   `json:"image" db:"image"`
 }
 
 func (q *QuestionsController) Get(c *gin.Context) {
@@ -81,11 +84,52 @@ func (q *QuestionsController) Get(c *gin.Context) {
 }
 
 func (q *QuestionsController) CreateWithAnswer(c *gin.Context) {
-	var questions QuestionsWithAnswers
 
-	if err := c.ShouldBindJSON(&questions); err != nil {
+	quizIdStr := c.PostForm("quiz_id")
+
+	quizId, err := strconv.Atoi(quizIdStr)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	questionText := c.PostForm("question_text")
+
+	pointsStr := c.PostForm("points")
+
+	points, err := strconv.Atoi(pointsStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	answersStr := c.PostForm("answers")
+	if answersStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "answer is required"})
+		return
+	}
+
+	var answers []Answer
+
+	if err := json.Unmarshal([]byte(answersStr), &answers); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var imageData []byte
+
+	file, err := c.FormFile("image")
+	if err == nil {
+		src, err := file.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "can't open file"})
+			return
+		}
+		defer src.Close()
+		imageData, err = io.ReadAll(src)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "can't read image"})
+			return
+		}
 	}
 
 	ctx := c.Request.Context()
@@ -105,7 +149,7 @@ func (q *QuestionsController) CreateWithAnswer(c *gin.Context) {
 	}()
 
 	var exists bool
-	err = q.db.QueryRow(c.Request.Context(), "SELECT EXISTS(SELECT 1 FROM quizzes WHERE id=$1)", questions.QuizID).Scan(&exists)
+	err = q.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM quizzes WHERE id=$1)", quizId).Scan(&exists)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "db check failed"})
 		return
@@ -116,27 +160,27 @@ func (q *QuestionsController) CreateWithAnswer(c *gin.Context) {
 		return
 	}
 
-	if questions.Points <= 0 {
+	if points <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "points must be greater than zero"})
 		return
 	}
 
-	if strings.TrimSpace(questions.QuestionText) == "" {
+	if strings.TrimSpace(questionText) == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "question text must not be empty"})
 		return
 	}
 
-	const query = `INSERT INTO questions (quiz_id, question_text, points) VALUES ($1, $2, $3) RETURNING id`
+	const query = `INSERT INTO questions (quiz_id, question_text, points, image) VALUES ($1, $2, $3, $4) RETURNING id`
 
 	var questionId int
 
-	err = q.db.QueryRow(c.Request.Context(), query, questions.QuizID, questions.QuestionText, questions.Points).Scan(&questionId)
+	err = q.db.QueryRow(ctx, query, quizId, questionText, points, imageData).Scan(&questionId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	for _, a := range questions.Answers {
+	for _, a := range answers {
 		if strings.TrimSpace(a.AnswerText) == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "answer text must not be empty"})
 			return
@@ -202,4 +246,30 @@ func (q *QuestionsController) Create(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"id": id})
+}
+
+func (q *QuestionsController) GetImage(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	const query = `SELECT image FROM questions WHERE id=$1`
+
+	var imageData []byte
+
+	err = q.db.QueryRow(c.Request.Context(), query, id).Scan(&imageData)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "quiz not found"})
+		return
+	}
+
+	if len(imageData) == 0 {
+		c.Status(http.StatusNoContent)
+		return
+	}
+
+	contentType := http.DetectContentType(imageData)
+	c.Data(http.StatusOK, contentType, imageData)
 }
