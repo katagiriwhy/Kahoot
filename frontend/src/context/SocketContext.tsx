@@ -1,43 +1,53 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { io, Socket } from "socket.io-client";
+import { createContext, useContext, useRef, useState, useCallback, type ReactNode } from "react";
 
 interface SocketContextType {
-    socket: Socket | null;
+    ws: WebSocket | null;
+    connect: (url: string) => void;
     send: (event: string, data?: any) => void;
+    close: () => void;
 }
 
 const SocketContext = createContext<SocketContextType>({
-    socket: null,
+    ws: null,
+    connect: () => {},
     send: () => {},
+    close: () => {},
 });
 
 export const useSocket = () => useContext(SocketContext);
 
-export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
-    const [socket, setSocket] = useState<Socket | null>(null);
+export const SocketProvider = ({ children }: { children: ReactNode }) => {
+    const wsRef = useRef<WebSocket | null>(null);
+    const [ws, setWs] = useState<WebSocket | null>(null);
 
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) return;
+    const connect = useCallback((url: string) => {
+        // Не подключаемся, если уже есть открытое или подключающееся соединение
+        if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) return;
 
-        const newSocket = io("http://172.20.10.3:8080", {
-            auth: { token },
-            transports: ["websocket"],
-        });
+        const socket = new WebSocket(url);
 
-        newSocket.on("connect", () => console.log("Socket connected:", newSocket.id));
-        newSocket.on("disconnect", (reason) => console.log("Socket disconnected:", reason));
+        socket.onopen = () => console.log("WebSocket connected");
+        socket.onclose = (e) => console.log("WebSocket disconnected", e);
+        socket.onerror = (e) => console.error("WebSocket error", e, socket.readyState);
 
-        setSocket(newSocket);
-
-        return () => {
-            newSocket.disconnect();
-        };
+        wsRef.current = socket;
+        setWs(socket);
     }, []);
 
-    const send = (event: string, data?: any) => {
-        if (socket) socket.emit(event, data);
-    };
+    const send = useCallback((event: string, data?: any) => {
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+        wsRef.current.send(JSON.stringify({ type: event, ...data }));
+    }, []);
 
-    return <SocketContext.Provider value={{ socket, send }}>{children}</SocketContext.Provider>;
+    const close = useCallback(() => {
+        wsRef.current?.close();
+        wsRef.current = null;
+        setWs(null);
+    }, []);
+
+    return (
+        <SocketContext.Provider value={{ ws, connect, send, close }}>
+            {children}
+        </SocketContext.Provider>
+    );
 };

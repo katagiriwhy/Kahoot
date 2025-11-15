@@ -1,48 +1,51 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSocket } from "../context/SocketContext";
 import "../styles/questionPage.css";
 
-export function QuestionPage({ token, isHost }: { token: string, isHost: boolean }) {
+export function QuestionPage({  isHost }: { isHost: boolean }) {
     const [question, setQuestion] = useState<{text: string, answers: {id: number, text: string}[], imageUrl?: string}>({text: '', answers: []});
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState(15);
-    const [ws, setWs] = useState<WebSocket | null>(null);
+    const { ws, send } = useSocket();
     const navigate = useNavigate();
 
     useEffect(() => {
-        const socket = new WebSocket(`ws://server/ws/game-sessions/join?token=${token}`);
-        socket.onmessage = (e) => {
+        if (!ws) return;
+
+        ws.onmessage = (e) => {
             const data = JSON.parse(e.data);
-            if (data.type === "question") {
-                setQuestion({
-                    text: data.question.text,
-                    answers: data.question.answers,
-                    imageUrl: `/questions/${data.question.id}/image`
-                });
-                setTimeLeft(data.timeLimit);
-            }
-            if (data.type === "question_end") {
-                navigate(`/results/${data.questionId}`);
+
+            switch (data.type) {
+                case "question":
+                    setQuestion({
+                        text: data.question.text,
+                        answers: data.question.answers,
+                        imageUrl: `/questions/${data.question.id}/image`
+                    });
+                    setTimeLeft(data.timeLimit);
+                    break;
+                case "question_end":
+                    navigate(`/interim/${data.questionId}`);
+                    break;
             }
         };
-        setWs(socket);
-        return () => socket.close();
-    }, []);
+    }, [ws, navigate]);
 
     useEffect(() => {
         if (timeLeft <= 0 && selectedAnswer !== null) {
-            ws?.send(JSON.stringify({ type: "answer", answerId: selectedAnswer }));
+            send("answer", { answerId: selectedAnswer });
         }
         if (timeLeft > 0) {
             const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
             return () => clearTimeout(timer);
         }
-    }, [timeLeft]);
+    }, [timeLeft, selectedAnswer, send]);
 
     return (
-        <div>
+        <div className="question-page">
             <h2>{question.text}</h2>
-            {question.imageUrl && <img src={question.imageUrl} alt="question" style={{maxWidth: "400px"}} />}
+            {question.imageUrl && <img src={question.imageUrl} alt="question" className="question-image"/>}
             <ul>
                 {question.answers.map(a => (
                     <li key={a.id}>

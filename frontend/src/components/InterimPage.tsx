@@ -1,35 +1,35 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles//interimPage.css";
+import { useSocket } from "../context/SocketContext";
+import "../styles/interimPage.css";
 
-export function InterimPage({ token, isHost }: { token: string, isHost: boolean }) {
+export function InterimPage({  isHost }: { isHost: boolean }) {
     const [players, setPlayers] = useState<{nickname: string, score: number}[]>([]);
     const [correctAnswer, setCorrectAnswer] = useState<string>('');
-    const [ws, setWs] = useState<WebSocket | null>(null);
+    const { ws, send } = useSocket();
     const navigate = useNavigate();
 
     useEffect(() => {
-        const socket = new WebSocket(`ws://server/ws/game-sessions/join?token=${token}`);
-        socket.onmessage = (e) => {
+        if (!ws) return;
+
+        ws.onmessage = (e) => {
             const data = JSON.parse(e.data);
-            if (data.type === "question_end") {
-                setCorrectAnswer(data.correctAnswer);
-                setPlayers(data.players);
-            }
-            if (data.type === "next_question") {
-                navigate(`/question/${data.nextQuestionId}`);
+            switch (data.type) {
+                case "question_end":
+                    setCorrectAnswer(data.correctAnswer);
+                    setPlayers(data.players);
+                    break;
+                case "next_question":
+                    navigate(`/question/${data.nextQuestionId}`);
+                    break;
             }
         };
-        setWs(socket);
-        return () => socket.close();
-    }, []);
+    }, [ws, navigate]);
 
-    const nextQuestion = () => {
-        ws?.send(JSON.stringify({ type: "next_question" }));
-    };
+    const nextQuestion = () => send("next_question");
 
     return (
-        <div>
+        <div className="interim-page">
             <h2>Правильный ответ: {correctAnswer}</h2>
             <table>
                 <thead>

@@ -1,17 +1,17 @@
-import "./App.css";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Register from "./components/Register";
-import Login from "./components/Login";
-import TempHome from "./components/TempHome";
-import Home from "./components/Home";
-import QuizCreate from "./components/QuizCreate";
-import CreateQuestions from "./components/CreateQuestions";
-import Lobby from "./components/Lobby";
-import { SocketProvider } from "./context/SocketContext";
+import './App.css'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Register from './components/Register'
+import Login from './components/Login'
+import TempHome from './components/TempHome';
+import Home from './components/Home';
+import QuizCreate from "./components/QuizCreate.tsx";
+import CreateQuestions from "./components/CreateQuestions.tsx";
+import Lobby from "./components/Lobby.tsx";
+import { SocketProvider } from './context/SocketContext'; // ← импортируем контекст
 
 function App() {
     return (
-        <SocketProvider>
+        <SocketProvider> {}
             <Router>
                 <Routes>
                     <Route path="/" element={<TempHome />} />
@@ -24,7 +24,7 @@ function App() {
                 </Routes>
             </Router>
         </SocketProvider>
-    );
+    )
 }
 
 export default App;

@@ -1,24 +1,24 @@
 import { useEffect, useState } from "react";
+import { useSocket } from "../context/SocketContext";
 import "../styles/finalPage.css";
 
-export function FinalPage({ token }: { token: string }) {
+export function FinalPage() {
     const [results, setResults] = useState<{nickname: string, score: number, rank: number}[]>([]);
-    const [,setWs] = useState<WebSocket | null>(null);
+    const { ws } = useSocket();
 
     useEffect(() => {
-        const socket = new WebSocket(`ws://server/ws/game-sessions/join?token=${token}`);
-        socket.onmessage = (e) => {
+        if (!ws) return;
+
+        ws.onmessage = (e) => {
             const data = JSON.parse(e.data);
             if (data.type === "quiz_finished") {
                 setResults(data.results);
             }
         };
-        setWs(socket);
-        return () => socket.close();
-    }, []);
+    }, [ws]);
 
     return (
-        <div>
+        <div className="final-page">
             <h1>Итоговые результаты</h1>
             <table>
                 <thead>

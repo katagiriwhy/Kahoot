@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "./Api";
 import { CREATE_LOBBY_URL } from "./Api";
+import "../styles/homePage.css"
 
 const Home = () => {
     const navigate = useNavigate();
