@@ -21,7 +21,6 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     const [ws, setWs] = useState<WebSocket | null>(null);
 
     const connect = useCallback((url: string) => {
-        // Не подключаемся, если уже есть открытое или подключающееся соединение
         if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) return;
 
         const socket = new WebSocket(url);

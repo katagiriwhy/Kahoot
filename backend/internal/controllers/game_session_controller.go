@@ -254,7 +254,7 @@ func (g *GameSessionController) Start(c *gin.Context) {
 
 	var amountPlayers int64
 
-	err = g.db.QueryRow(c.Request.Context(), `SELECT COUNT(*) FROM session_players WHERE session_id = $1`, input.SessionId).Scan(&amountPlayers)
+	err = g.db.QueryRow(c.Request.Context(), `SELECT COUNT(*) FROM session_players WHERE session_id = $1 AND user_id != $2`, input.SessionId, hostID).Scan(&amountPlayers)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "db error"})
 		return
@@ -276,6 +276,25 @@ func (g *GameSessionController) Start(c *gin.Context) {
 	if affected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
 		return
+	}
+
+	var quizID int64
+
+	err = g.db.QueryRow(c.Request.Context(), `SELECT quiz_id FROM game_sessions WHERE id = $1`, input.SessionId).Scan(&quizID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "db error"})
+		return
+	}
+
+	questionRows, err := g.db.Query(c.Request.Context(), `SELECT id, question_text FROM questions WHERE quiz_id = $1`, quizID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "can't get questions from database"})
+		return
+	}
+
+	// TODO I stopped here
+	for questionRows.Next() {
+
 	}
 
 	c.JSON(http.StatusOK, gin.H{"started": true})

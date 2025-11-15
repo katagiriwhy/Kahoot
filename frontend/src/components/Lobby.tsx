@@ -49,7 +49,19 @@ const Lobby = () => {
         return () => ws.removeEventListener("message", handleMessage);
     }, [ws, send, id, navigate]);
 
-    const startGame = () => send("start_game", { session_id: Number(id) });
+    const startGame = async () => {
+        const token = localStorage.getItem("token");
+        await fetch("http://172.20.10.3:8080/game-sessions/start", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({ session_id: Number(id) }),
+        });
+    };
+
+    //const startGame = () => send("start_game", { session_id: Number(id) });
     //const endLobby = () => { send("end_lobby", { session_id: Number(id) }); navigate("/");}
 
     const endLobby = async () => {

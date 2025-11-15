@@ -19,26 +19,44 @@ var Upgrader = websocket.Upgrader{
 	},
 }
 
+type GameSessionState struct {
+	Questions    []QuestionData
+	CurrentIndex int
+}
+
+type QuestionData struct {
+	ID      int64
+	Text    string
+	Answers []AnswerData
+}
+
+type AnswerData struct {
+	ID   int64
+	Text string
+}
+
 type Player struct {
 	Id       string `json:"id"`
 	Nickname string `json:"nickname"`
 }
 
 type Hub struct {
-	Clients    map[int64]map[*Client]struct{}
-	Register   chan *Client
-	Unregister chan *Client
-	mu         *sync.RWMutex
-	db         *pgxpool.Pool
+	Clients      map[int64]map[*Client]struct{}
+	GameSessions map[int64]*GameSessionState
+	Register     chan *Client
+	Unregister   chan *Client
+	mu           *sync.RWMutex
+	db           *pgxpool.Pool
 }
 
 func NewHub(db *pgxpool.Pool) *Hub {
 	return &Hub{
-		Clients:    make(map[int64]map[*Client]struct{}),
-		Register:   make(chan *Client),
-		Unregister: make(chan *Client),
-		mu:         &sync.RWMutex{},
-		db:         db,
+		Clients:      make(map[int64]map[*Client]struct{}),
+		GameSessions: make(map[int64]*GameSessionState),
+		Register:     make(chan *Client),
+		Unregister:   make(chan *Client),
+		mu:           &sync.RWMutex{},
+		db:           db,
 	}
 }
 
