@@ -58,7 +58,7 @@ const Lobby = () => {
                 "Authorization": `Bearer ${token}`,
             },
             body: JSON.stringify({ session_id: Number(id) }),
-        });
+        }).then(() => navigate(`/question/0`));
     };
 
     //const startGame = () => send("start_game", { session_id: Number(id) });

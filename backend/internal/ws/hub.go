@@ -22,6 +22,9 @@ var Upgrader = websocket.Upgrader{
 type GameSessionState struct {
 	Questions    []QuestionData
 	CurrentIndex int
+	Answers      map[int64]map[int64]int64
+	Scores       map[int64]int
+	HostID       int64
 }
 
 type QuestionData struct {
@@ -183,4 +186,46 @@ func (h *Hub) getPlayers(sessionId int64) ([]Player, error) {
 	}
 
 	return players, nil
+}
+func (h *Hub) BroadcastQuestion(sessionId int64, timeLimit int16) {
+	h.mu.RLock()
+	clients, ok := h.Clients[sessionId]
+	session, sessionExists := h.GameSessions[sessionId]
+	h.mu.RUnlock()
+
+	if !ok || !sessionExists {
+		log.Printf("[Hub] BroadcastQuestion no session or clients session=%d ", sessionId)
+		return
+	}
+
+	if session.CurrentIndex >= len(session.Questions) {
+		log.Printf("[Hub] BroadcastQuestion no more questions in session=%d", sessionId)
+		return
+	}
+
+	question := session.Questions[session.CurrentIndex]
+
+	msg := map[string]any{
+		"type": "question",
+		"question": map[string]any{
+			"id":      question.ID,
+			"text":    question.Text,
+			"answers": question.Answers,
+		},
+		"timeLimit": timeLimit,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	for client := range clients {
+		select {
+		case client.Send <- data:
+		default:
+			h.Unregister <- client
+		}
+	}
 }

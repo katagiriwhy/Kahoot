@@ -264,7 +264,7 @@ func (g *GameSessionController) Start(c *gin.Context) {
 		return
 	}
 
-	const query = `UPDATE game_sessions SET started_at = NOW() WHERE id = $1 AND started_at IS NULL`
+	const query = `UPDATE game_sessions SET started_at = NOW(), game_state = 'question' WHERE id = $1 AND started_at IS NULL`
 
 	rows, err := g.db.Exec(c.Request.Context(), query, input.SessionId)
 	if err != nil {
@@ -279,25 +279,62 @@ func (g *GameSessionController) Start(c *gin.Context) {
 	}
 
 	var quizID int64
+	var timeLimit int16
 
-	err = g.db.QueryRow(c.Request.Context(), `SELECT quiz_id FROM game_sessions WHERE id = $1`, input.SessionId).Scan(&quizID)
+	err = g.db.QueryRow(c.Request.Context(), `SELECT gs.quiz_id, q.time_limit
+     FROM game_sessions gs
+     JOIN quizzes q ON gs.quiz_id = q.id
+     WHERE gs.id = $1`, input.SessionId).Scan(&quizID, &timeLimit)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "db error"})
 		return
 	}
 
-	questionRows, err := g.db.Query(c.Request.Context(), `SELECT id, question_text FROM questions WHERE quiz_id = $1`, quizID)
+	questionRows, err := g.db.Query(c.Request.Context(), `SELECT q.id, q.question_text, a.id, a.answer_text
+    FROM questions q
+    JOIN answers a ON q.id = a.question_id
+    WHERE q.quiz_id = $1
+    ORDER BY q.id, a.id`, quizID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "can't get questions from database"})
 		return
 	}
+	defer questionRows.Close()
 
-	// TODO I stopped here
+	questionMap := make(map[int64]*ws.QuestionData)
+
 	for questionRows.Next() {
+		var qStr, aStr string
+		var qID, aID int64
 
+		err = questionRows.Scan(&qID, &qStr, &aStr, &aID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		if _, ok := questionMap[qID]; !ok {
+			questionMap[qID] = &ws.QuestionData{
+				ID:      qID,
+				Text:    qStr,
+				Answers: []ws.AnswerData{},
+			}
+		}
+		questionMap[qID].Answers = append(questionMap[qID].Answers, ws.AnswerData{
+			ID:   aID,
+			Text: aStr,
+		})
+	}
+	gameQuestions := make([]ws.QuestionData, 0, len(questionMap))
+
+	for _, q := range questionMap {
+		gameQuestions = append(gameQuestions, *q)
+	}
+	g.hub.GameSessions[input.SessionId] = &ws.GameSessionState{
+		Questions:    gameQuestions,
+		CurrentIndex: 0,
 	}
 
-	c.JSON(http.StatusOK, gin.H{"started": true})
+	g.hub.BroadcastQuestion(input.SessionId, timeLimit)
 }
 
 func (g *GameSessionController) End(c *gin.Context) {
