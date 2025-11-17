@@ -18,30 +18,29 @@ export function InterimPage() {
     const [correctAnswerText, setCorrectAnswerText] = useState<string>("");
     const [players, setPlayers] = useState<Player[]>([]);
     const navigatedRef = useRef(false);
-    const lastQuestionIdRef = useRef<number | null>(null);
-    const isMountedRef = useRef(false);
+    const processedQuestionIdsRef = useRef<Set<number>>(new Set());
+    const isInitialMountRef = useRef(true);
+    const navigationInProgressRef = useRef(false);
 
     useEffect(() => {
-        // Reset navigation flag when questionId changes
+        // Reset navigation flag when questionId changes (new interim page for new question)
         const currentQuestionId = questionId ? parseInt(questionId) : null;
-        if (currentQuestionId && lastQuestionIdRef.current !== currentQuestionId) {
+        if (currentQuestionId) {
+            console.log(`[InterimPage] Mounted for question ${currentQuestionId}, resetting navigation state`);
             navigatedRef.current = false;
-            lastQuestionIdRef.current = currentQuestionId;
-            isMountedRef.current = false; // Reset mount flag for new question
-            // Set mounted after delay
-            setTimeout(() => {
-                isMountedRef.current = true;
-            }, 200);
+            navigationInProgressRef.current = false;
+            // Mark the current question as processed so we don't navigate to it from cache
+            processedQuestionIdsRef.current.add(currentQuestionId);
         }
     }, [questionId]);
 
     useEffect(() => {
-        // Mark as mounted after a short delay to distinguish cached vs new messages
-        const mountTimeout = setTimeout(() => {
-            isMountedRef.current = true;
-        }, 200);
-        
-        let navigationTimeout: ReturnType<typeof setTimeout> | null = null;
+        // Skip cached messages on initial mount - use a longer delay to ensure we skip cached
+        let skipCached = true;
+        const skipTimeout = setTimeout(() => {
+            skipCached = false;
+            isInitialMountRef.current = false;
+        }, 500);
         
         const unsub = subscribe(msg => {
             if (msg.type === "question_end") {
@@ -57,33 +56,49 @@ export function InterimPage() {
                     })));
                 }
             }
-            // Navigate to question page when a new question is broadcast (only once)
-            // Skip if we just mounted (likely a cached message)
-            if (msg.type === "question" && !navigatedRef.current && isMountedRef.current) {
+            // Navigate to question page when a new question is broadcast
+            if (msg.type === "question") {
                 const newQuestionId = msg.question?.id ?? msg.question?.ID;
-                // Only navigate if this is a different question than the one we're viewing results for
                 const currentQuestionId = questionId ? parseInt(questionId) : null;
-                if (newQuestionId && newQuestionId !== currentQuestionId && newQuestionId !== lastQuestionIdRef.current) {
-                    // Clear any pending navigation
-                    if (navigationTimeout) {
-                        clearTimeout(navigationTimeout);
-                    }
-                    // Use a small timeout to debounce rapid messages
-                    navigationTimeout = setTimeout(() => {
-                        // Check if we're still on interim page before navigating
-                        if (!navigatedRef.current && location.pathname.startsWith("/interim")) {
-                            navigatedRef.current = true;
-                            lastQuestionIdRef.current = newQuestionId;
-                            navigate("/question", { state: { isHost } });
-                        }
-                    }, 100);
+                
+                // Skip cached messages on initial mount
+                if (skipCached && isInitialMountRef.current) {
+                    console.log(`[InterimPage] Skipping cached question ${newQuestionId} on initial mount`);
+                    return;
+                }
+                
+                // Check if we're still on the interim page (not already navigating)
+                if (!location.pathname.startsWith("/interim")) {
+                    console.log(`[InterimPage] Not on interim page (${location.pathname}), ignoring question ${newQuestionId}`);
+                    return;
+                }
+                
+                // Prevent multiple simultaneous navigations
+                if (navigationInProgressRef.current || navigatedRef.current) {
+                    console.log(`[InterimPage] Navigation already in progress or completed, ignoring question ${newQuestionId}`);
+                    return;
+                }
+                
+                // Only navigate if:
+                // 1. We have a valid question ID
+                // 2. It's different from the question we're viewing results for
+                // 3. We haven't already processed this question
+                if (newQuestionId && 
+                    newQuestionId !== currentQuestionId && 
+                    !processedQuestionIdsRef.current.has(newQuestionId)) {
+                    
+                    console.log(`[InterimPage] Navigating to question ${newQuestionId} (viewing results for question ${currentQuestionId})`);
+                    navigationInProgressRef.current = true;
+                    navigatedRef.current = true;
+                    processedQuestionIdsRef.current.add(newQuestionId);
+                    
+                    // Navigate immediately
+                    navigate("/question", { state: { isHost } });
                 }
             }
             if (msg.type === "game_finished" || msg.type === "game_results") {
-                if (navigationTimeout) {
-                    clearTimeout(navigationTimeout);
-                }
-                if (!navigatedRef.current) {
+                if (!navigatedRef.current && !navigationInProgressRef.current && location.pathname.startsWith("/interim")) {
+                    navigationInProgressRef.current = true;
                     navigatedRef.current = true;
                     navigate("/final");
                 }
@@ -91,11 +106,8 @@ export function InterimPage() {
         });
         
         return () => {
-            clearTimeout(mountTimeout);
+            clearTimeout(skipTimeout);
             unsub();
-            if (navigationTimeout) {
-                clearTimeout(navigationTimeout);
-            }
         };
     }, [subscribe, navigate, isHost, questionId, location]);
 

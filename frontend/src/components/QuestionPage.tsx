@@ -79,8 +79,13 @@ export function QuestionPage() {
     useEffect(() => {
         if (!question) return;
         
+        // Stop timer if we've already navigated
+        if (navigated || navigatedToInterimRef.current) {
+            return;
+        }
+        
         // When timer reaches 0, navigate to interim page
-        if (timeLeft <= 0 && !navigated && !navigatedToInterimRef.current) {
+        if (timeLeft <= 0) {
             // For players, send the answer if we have one and haven't sent it yet (fallback)
             if (!isHost && !answerSent && selected !== null) {
                 send("answer", { answer_id: selected });
@@ -95,16 +100,17 @@ export function QuestionPage() {
             }
             // Navigate to interim page
             navigatedToInterimRef.current = true;
-            navigate(`/interim/${question.id}`, { state: { isHost } });
             setNavigated(true);
+            navigate(`/interim/${question.id}`, { state: { isHost } });
             return;
         }
         
-        // Stop timer if we've already navigated
-        if (navigated) return;
-        
         // Continue countdown
-        const t = setTimeout(() => setTimeLeft(s => s - 1), 1000);
+        const t = setTimeout(() => {
+            if (!navigated && !navigatedToInterimRef.current) {
+                setTimeLeft(s => Math.max(0, s - 1));
+            }
+        }, 1000);
         return () => clearTimeout(t);
     }, [timeLeft, selected, question, send, answerSent, isHost, navigated, navigate]);
 

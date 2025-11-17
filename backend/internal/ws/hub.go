@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -21,11 +22,12 @@ var Upgrader = websocket.Upgrader{
 }
 
 type GameSessionState struct {
-	Questions    []QuestionData
-	CurrentIndex int
-	Answers      map[int64]map[int64]int64
-	Scores       map[int64]int
-	HostID       int64
+	Questions           []QuestionData
+	CurrentIndex        int
+	Answers             map[int64]map[int64]int64
+	Scores              map[int64]int
+	HostID              int64
+	LastEndedQuestionID int64 // Track which question was last ended to prevent double-ending
 }
 
 type QuestionData struct {
@@ -231,18 +233,28 @@ func (h *Hub) StartGame(sessionID int64, hostID int64) error {
 		qMap[qID].Answers = append(qMap[qID].Answers, AnswerData{ID: aID, Text: aText})
 	}
 
+	// Convert map to slice and sort by question ID to ensure consistent order
 	gameQuestions := make([]QuestionData, 0, len(qMap))
 	for _, q := range qMap {
 		gameQuestions = append(gameQuestions, *q)
 	}
+	// Sort by question ID to ensure questions are in the correct order
+	sort.Slice(gameQuestions, func(i, j int) bool {
+		return gameQuestions[i].ID < gameQuestions[j].ID
+	})
 
-	log.Println("gameQuestions:", gameQuestions)
+	log.Printf("[Hub] StartGame: session=%d, totalQuestions=%d", sessionID, len(gameQuestions))
+	for i, q := range gameQuestions {
+		log.Printf("[Hub] StartGame: question[%d] = ID=%d, text=%s", i, q.ID, q.Text)
+	}
+
 	gs := &GameSessionState{
-		Questions:    gameQuestions,
-		CurrentIndex: 0,
-		Answers:      make(map[int64]map[int64]int64),
-		Scores:       make(map[int64]int),
-		HostID:       hostID,
+		Questions:           gameQuestions,
+		CurrentIndex:        0,
+		Answers:             make(map[int64]map[int64]int64),
+		Scores:              make(map[int64]int),
+		HostID:              hostID,
+		LastEndedQuestionID: 0,
 	}
 
 	h.mu.Lock()
@@ -250,6 +262,7 @@ func (h *Hub) StartGame(sessionID int64, hostID int64) error {
 	h.mu.Unlock()
 
 	// Рассылаем первый вопрос
+	log.Printf("[Hub] StartGame: broadcasting first question (index 0)")
 	h.BroadcastQuestion(sessionID, timeLimit)
 	return nil
 }
@@ -271,6 +284,8 @@ func (h *Hub) BroadcastQuestion(sessionId int64, timeLimit int16) {
 	}
 
 	question := session.Questions[session.CurrentIndex]
+	log.Printf("[Hub] BroadcastQuestion: session=%d, index=%d/%d, questionID=%d, text=%s",
+		sessionId, session.CurrentIndex, len(session.Questions), question.ID, question.Text)
 
 	msg := map[string]any{
 		"type": "question",
@@ -291,7 +306,7 @@ func (h *Hub) BroadcastQuestion(sessionId int64, timeLimit int16) {
 	for client := range clients {
 		select {
 		case client.Send <- data:
-			log.Printf("[Hub] BroadcastQuestion SENT QUESTION TO client=%d", client)
+			log.Printf("[Hub] BroadcastQuestion SENT QUESTION TO client user=%d", client.UserID)
 		default:
 			log.Printf("[Hub] client channel full, skipping send user=%d", client.UserID)
 			//h.Unregister <- client
@@ -324,6 +339,12 @@ func (h *Hub) EndQuestion(sessionID int64) {
 		return
 	}
 	question := session.Questions[session.CurrentIndex]
+	// Prevent ending the same question twice
+	if session.LastEndedQuestionID == question.ID {
+		h.mu.Unlock()
+		return
+	}
+	session.LastEndedQuestionID = question.ID
 	h.mu.Unlock()
 
 	var correctID int64
@@ -341,6 +362,10 @@ func (h *Hub) EndQuestion(sessionID int64) {
 	players := make([]map[string]any, 0, len(clients))
 	for client := range clients {
 		uid := client.UserID
+		// Skip the host - they don't participate in scoring
+		if uid == session.HostID {
+			continue
+		}
 		var nick string
 		_ = h.db.QueryRow(context.Background(), `SELECT nickname FROM session_players WHERE session_id=$1 AND user_id=$2`, sessionID, uid).Scan(&nick)
 		if answersForQ != nil {
@@ -387,10 +412,42 @@ func (h *Hub) NextQuestion(sessionID int64, userID int64, timeLimit int16) {
 		h.mu.Unlock()
 		return
 	}
-	session.CurrentIndex++
-
+	// Check if there are more questions
+	if session.CurrentIndex >= len(session.Questions) {
+		h.mu.Unlock()
+		return
+	}
+	currentIdx := session.CurrentIndex
 	h.mu.Unlock()
 
+	// End the current question first to calculate scores (if not already ended)
+	// EndQuestion will check if the question was already ended and skip if so
+	h.EndQuestion(sessionID)
+
+	// Now move to next question
+	h.mu.Lock()
+	session2, ok2 := h.GameSessions[sessionID]
+	if !ok2 {
+		h.mu.Unlock()
+		return
+	}
+	// Always increment to next question if we're still on the same index
+	// (EndQuestion doesn't change CurrentIndex, so this should always be true)
+	if session2.CurrentIndex == currentIdx {
+		if session2.CurrentIndex < len(session2.Questions) {
+			session2.CurrentIndex++
+			log.Printf("[Hub] NextQuestion: moved from index %d to %d", currentIdx, session2.CurrentIndex)
+		} else {
+			log.Printf("[Hub] NextQuestion: no more questions, currentIndex=%d, total=%d", session2.CurrentIndex, len(session2.Questions))
+			h.mu.Unlock()
+			return
+		}
+	} else {
+		log.Printf("[Hub] NextQuestion: index changed unexpectedly from %d to %d", currentIdx, session2.CurrentIndex)
+	}
+	h.mu.Unlock()
+
+	// Broadcast the next question
 	h.BroadcastQuestion(sessionID, timeLimit)
 
 	h.mu.RLock()
@@ -406,6 +463,10 @@ func (h *Hub) NextQuestion(sessionID int64, userID int64, timeLimit int16) {
 		players := make([]map[string]any, 0, len(clients))
 		for client := range clients {
 			uid := client.UserID
+			// Skip the host - they don't participate in scoring
+			if uid == s.HostID {
+				continue
+			}
 			var nick string
 			_ = h.db.QueryRow(context.Background(),
 				`SELECT nickname FROM session_players WHERE session_id=$1 AND user_id=$2`,

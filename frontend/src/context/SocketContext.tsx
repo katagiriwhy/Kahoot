@@ -59,8 +59,37 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
         ws.onmessage = (event) => {
             console.log("[WS] MESSAGE:", event.data);
-            const data = JSON.parse(event.data);
-            dispatch(data);
+            try {
+                // Try to parse as single JSON object first
+                const data = JSON.parse(event.data);
+                dispatch(data);
+            } catch (e) {
+                // If parsing fails, try to split by } and parse each part
+                // This handles cases where multiple JSON objects might be concatenated
+                const text = event.data.toString();
+                let start = 0;
+                let depth = 0;
+                for (let i = 0; i < text.length; i++) {
+                    if (text[i] === '{') depth++;
+                    if (text[i] === '}') {
+                        depth--;
+                        if (depth === 0) {
+                            try {
+                                const chunk = text.substring(start, i + 1);
+                                const data = JSON.parse(chunk);
+                                dispatch(data);
+                            } catch (parseErr) {
+                                const chunk = text.substring(start, i + 1);
+                                console.error("[WS] Failed to parse chunk:", parseErr, chunk);
+                            }
+                            start = i + 1;
+                        }
+                    }
+                }
+                if (start < text.length) {
+                    console.warn("[WS] Unparsed remainder:", text.substring(start));
+                }
+            }
         };
 
         ws.onclose = () => {
@@ -112,6 +141,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         if (lastLobbyUpdate.current) {
             try { handler(lastLobbyUpdate.current); } catch (e) { console.error(e); }
         }
+        // Replay cached question - QuestionPage needs it, but InterimPage should ignore it
         if (lastQuestion.current) {
             try { handler(lastQuestion.current); } catch (e) { console.error(e); }
         }
