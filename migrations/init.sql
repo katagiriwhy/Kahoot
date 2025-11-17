@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS public.answers (
 
 CREATE TABLE IF NOT EXISTS public.game_sessions (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  state game_state NOT NULL DEFAULT 'lobby',
+  game_state game_state NOT NULL DEFAULT 'lobby',
   current_question INT,
   question_started_at TIMESTAMP,
   host_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

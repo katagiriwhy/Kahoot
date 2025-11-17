@@ -1,61 +1,89 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
-import "../styles/questionPage.css";
 
-export function QuestionPage({  isHost }: { isHost: boolean }) {
-    const [question, setQuestion] = useState<{text: string, answers: {id: number, text: string}[], imageUrl?: string}>({text: '', answers: []});
-    const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+type Question = {
+    id: number;
+    text: string;
+    answers: { id: number; text: string }[];
+    timeLimit: number;
+};
+
+export function QuestionPage({ isHost }: { isHost: boolean }) {
+    const [question, setQuestion] = useState<Question | null>(null);
+    const [selected, setSelected] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState(15);
-    const { ws, send } = useSocket();
+
     const navigate = useNavigate();
+    const { subscribe, send } = useSocket();
 
     useEffect(() => {
-        if (!ws) return;
-
-        ws.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-
-            switch (data.type) {
-                case "question":
-                    setQuestion({
-                        text: data.question.text,
-                        answers: data.question.answers,
-                        imageUrl: `/questions/${data.question.id}/image`
-                    });
-                    setTimeLeft(data.timeLimit);
-                    break;
-                case "question_end":
-                    navigate(`/interim/${data.questionId}`);
-                    break;
-            }
+        const normalizeQuestion = (raw: any): Question | null => {
+            if (!raw) return null;
+            const q = raw.question ?? raw;
+            if (!q) return null;
+            return {
+                id: q.id ?? q.ID,
+                text: q.text ?? q.Text ?? "",
+                answers: (q.answers ?? q.Answers ?? []).map((a: any) => ({
+                    id: a.id ?? a.ID,
+                    text: a.text ?? a.Text ?? "",
+                })),
+                timeLimit: raw.timeLimit ?? q.timeLimit ?? q.TimeLimit ?? 15,
+            };
         };
-    }, [ws, navigate]);
+
+        const unsub = subscribe((msg) => {
+            if (msg.type === "question") {
+                const normalized = normalizeQuestion(msg);
+                if (normalized) {
+                    setQuestion(normalized);
+                    setTimeLeft(normalized.timeLimit ?? 15);
+                }
+                setSelected(null);
+            }
+            if (msg.type === "question_end") {
+                navigate(`/interim/${msg.questionId}`);
+            }
+            if (msg.type === "lobby_closed") {
+                navigate("/");
+            }
+            if (msg.type === "game_finished" || msg.type === "game_results") {
+                navigate("/final");
+            }
+        });
+        return unsub;
+    }, [subscribe, navigate]);
 
     useEffect(() => {
-        if (timeLeft <= 0 && selectedAnswer !== null) {
-            send("answer", { answerId: selectedAnswer });
+        if (!question) return;
+        if (timeLeft <= 0) {
+            if (selected !== null) {
+                send("answer", { answer_id: selected });
+            } else {
+                // if no selected answer, optionally send empty or ignore
+            }
+            return;
         }
-        if (timeLeft > 0) {
-            const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [timeLeft, selectedAnswer, send]);
+        const t = setTimeout(() => setTimeLeft(s => s - 1), 1000);
+        return () => clearTimeout(t);
+    }, [timeLeft, selected, question, send]);
+
+     if (!question) return <p>Loading question...</p>;
 
     return (
-        <div className="question-page">
+        <div>
             <h2>{question.text}</h2>
-            {question.imageUrl && <img src={question.imageUrl} alt="question" className="question-image"/>}
             <ul>
                 {question.answers.map(a => (
                     <li key={a.id}>
-                        <button disabled={isHost} onClick={() => setSelectedAnswer(a.id)}>
+                        <button disabled={isHost || selected !== null} onClick={() => setSelected(a.id)}>
                             {a.text}
                         </button>
                     </li>
                 ))}
             </ul>
-            <p>Осталось времени: {timeLeft} сек</p>
+            <p>Time left: {timeLeft}s</p>
         </div>
     );
 }

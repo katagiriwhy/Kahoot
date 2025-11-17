@@ -2,7 +2,9 @@ package ws
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"time"
 
@@ -97,6 +99,7 @@ func (c *Client) WritePump() {
 
 func (c *Client) ReadPump(hub *Hub) {
 	log.Printf("[ReadPump] start user=%d session=%d", c.UserID, c.SessionID)
+
 	defer func() {
 		hub.Unregister <- c
 		c.Conn.Close()
@@ -105,26 +108,124 @@ func (c *Client) ReadPump(hub *Hub) {
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error {
 		c.Conn.SetReadDeadline(time.Now().Add(pongWait))
-		log.Printf("[ReadPump] PONG user=%d session=%d", c.UserID, c.SessionID)
 		return nil
 	})
 
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
-			log.Printf("[ReadPump] READ ERROR user=%d session=%d err=%v",
+			log.Printf("[ReadPump] read error user=%d session=%d: %v",
 				c.UserID, c.SessionID, err)
 			break
 		}
-		var msg struct {
-			Type string `json:"type"`
+
+		var msg map[string]any
+		if err := json.Unmarshal(message, &msg); err != nil {
+			log.Printf("[ReadPump] bad json user=%d session=%d: %v",
+				c.UserID, c.SessionID, err)
+			continue
 		}
-		if json.Unmarshal(message, &msg) == nil && msg.Type == "leave" {
+
+		msgType, _ := msg["type"].(string)
+
+		switch msgType {
+
+		case "leave":
 			log.Printf("[ReadPump] LEAVE user=%d session=%d", c.UserID, c.SessionID)
 			hub.db.Exec(context.Background(),
 				`DELETE FROM session_players WHERE session_id=$1 AND user_id=$2`,
 				c.SessionID, c.UserID)
-			break
+			return
+
+		case "start_game":
+			log.Printf("[ReadPump] START_GAME by user %d", c.UserID)
+
+			var hostID int64
+			var startedAt *time.Time
+
+			err := hub.db.QueryRow(context.Background(),
+				`SELECT host_id, started_at  FROM game_sessions WHERE id = $1`, c.SessionID,
+			).Scan(&hostID, &startedAt)
+
+			log.Printf("[ReadPump]  user=%d, hostID=%d", c.UserID, hostID)
+			if errors.Is(err, sql.ErrNoRows) {
+				log.Printf("[ReadPump] No rows found for user=%d session=%d", c.UserID, c.SessionID)
+				continue
+			}
+			if err != nil {
+				log.Printf("[ReadPump] START_GAME ERROR user=%d session=%d: %v", c.UserID, c.SessionID, err)
+				continue
+			}
+			if hostID != c.UserID {
+				log.Printf("[ReadPump] ONLY HOST CAN START A GAME user=%d session=%d", c.UserID, c.SessionID)
+				continue
+			}
+
+			if startedAt != nil {
+				log.Printf("[ReadPump] Session already started at user=%d session=%d", c.UserID, c.SessionID)
+				continue
+			}
+
+			var amountPlayers int64
+
+			err = hub.db.QueryRow(context.Background(), `SELECT COUNT(*) FROM session_players WHERE session_id = $1`, c.SessionID).Scan(&amountPlayers)
+			if err != nil {
+				log.Printf("[ReadPump]Error: %v, user=%d session=%d", err, c.UserID, c.SessionID)
+				continue
+			}
+			if amountPlayers == 0 {
+				log.Printf("[ReadPump] Can't start a game, because not enough players for user=%d session=%d, players=%d", c.UserID, c.SessionID, amountPlayers)
+				continue
+			}
+
+			if err := hub.StartGame(c.SessionID, c.UserID); err != nil {
+				log.Println("hub.StartGame error:", err)
+			}
+
+		case "answer":
+			answerFloat, ok := msg["answer_id"].(float64)
+			if !ok {
+				log.Printf("[ReadPump] invalid answer from user=%d", c.UserID)
+				continue
+			}
+			answerID := int64(answerFloat)
+
+			hub.mu.RLock()
+			session := hub.GameSessions[c.SessionID]
+			var questionID int64
+			if session != nil && session.CurrentIndex < len(session.Questions) {
+				questionID = session.Questions[session.CurrentIndex].ID
+			}
+			hub.mu.RUnlock()
+
+			if questionID == 0 {
+				log.Printf("[ReadPump] answer ignored: no active question user=%d", c.UserID)
+				continue
+			}
+
+			hub.SubmitAnswer(c.SessionID, c.UserID, questionID, answerID)
+			log.Printf("[ReadPump] answer accepted user=%d q=%d ans=%d",
+				c.UserID, questionID, answerID)
+
+		case "next_question":
+			log.Printf("[ReadPump] NEXT QUESTION by user %d", c.UserID)
+
+			var timeLimit int16
+			err := hub.db.QueryRow(context.Background(),
+				`SELECT q.time_limit 
+				 FROM game_sessions gs 
+				 JOIN quizzes q ON gs.quiz_id = q.id
+				 WHERE gs.id=$1`,
+				c.SessionID).Scan(&timeLimit)
+			if err != nil {
+				log.Printf("[ReadPump] next_question failed: cannot load time_limit: %v", err)
+				continue
+			}
+
+			hub.NextQuestion(c.SessionID, c.UserID, timeLimit)
+
+		default:
+			log.Printf("[ReadPump] unknown message type=%s from user=%d", msgType, c.UserID)
 		}
 	}
 }

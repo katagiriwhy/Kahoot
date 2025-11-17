@@ -208,133 +208,72 @@ func getUserId(c *gin.Context) (int64, bool) {
 }
 
 func (g *GameSessionController) Start(c *gin.Context) {
-
 	userId, ok := getUserId(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unable to get user_id while starting a new session"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unable to get user_id"})
 		return
 	}
 
 	var input struct {
 		SessionId int64 `json:"session_id" binding:"required"`
 	}
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&input); err != nil || input.SessionId <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session_id"})
 		return
 	}
 
-	if input.SessionId <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "session_id must be positive"})
-		return
-	}
-
+	// Проверка хоста и наличия игроков
 	var hostID int64
 	var startedAt *time.Time
-
 	err := g.db.QueryRow(c.Request.Context(),
-		`SELECT host_id, started_at  FROM game_sessions WHERE id = $1`, input.SessionId,
+		`SELECT host_id, started_at FROM game_sessions WHERE id=$1`, input.SessionId,
 	).Scan(&hostID, &startedAt)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		c.JSON(404, gin.H{"error": "session not found"})
-		return
-	}
 	if err != nil {
-		c.JSON(500, gin.H{"error": "db error"})
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(404, gin.H{"error": "session not found"})
+		} else {
+			c.JSON(500, gin.H{"error": "db error"})
+		}
 		return
 	}
+
 	if hostID != userId {
 		c.JSON(403, gin.H{"error": "only host can start the game"})
 		return
 	}
 	if startedAt != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "session already started"})
+		c.JSON(400, gin.H{"error": "session already started"})
 		return
 	}
 
-	var amountPlayers int64
-
-	err = g.db.QueryRow(c.Request.Context(), `SELECT COUNT(*) FROM session_players WHERE session_id = $1 AND user_id != $2`, input.SessionId, hostID).Scan(&amountPlayers)
-	if err != nil {
-		c.JSON(500, gin.H{"error": "db error"})
-		return
-	}
-	if amountPlayers == 0 {
+	var playerCount int64
+	err = g.db.QueryRow(c.Request.Context(),
+		`SELECT COUNT(*) FROM session_players WHERE session_id=$1 AND user_id != $2`,
+		input.SessionId, hostID,
+	).Scan(&playerCount)
+	if err != nil || playerCount == 0 {
 		c.JSON(403, gin.H{"error": "no players to start the game"})
 		return
 	}
 
-	const query = `UPDATE game_sessions SET started_at = NOW(), game_state = 'question' WHERE id = $1 AND started_at IS NULL`
-
-	rows, err := g.db.Exec(c.Request.Context(), query, input.SessionId)
+	// Обновляем сессию в БД
+	_, err = g.db.Exec(c.Request.Context(),
+		`UPDATE game_sessions SET started_at=NOW(), game_state='question' WHERE id=$1 AND started_at IS NULL`,
+		input.SessionId,
+	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(500, gin.H{"error": "failed to start session"})
 		return
 	}
 
-	affected := rows.RowsAffected()
-	if affected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
-		return
-	}
-
-	var quizID int64
-	var timeLimit int16
-
-	err = g.db.QueryRow(c.Request.Context(), `SELECT gs.quiz_id, q.time_limit
-     FROM game_sessions gs
-     JOIN quizzes q ON gs.quiz_id = q.id
-     WHERE gs.id = $1`, input.SessionId).Scan(&quizID, &timeLimit)
-	if err != nil {
-		c.JSON(500, gin.H{"error": "db error"})
-		return
-	}
-
-	questionRows, err := g.db.Query(c.Request.Context(), `SELECT q.id, q.question_text, a.id, a.answer_text
-    FROM questions q
-    JOIN answers a ON q.id = a.question_id
-    WHERE q.quiz_id = $1
-    ORDER BY q.id, a.id`, quizID)
-	if err != nil {
-		c.JSON(500, gin.H{"error": "can't get questions from database"})
-		return
-	}
-	defer questionRows.Close()
-
-	questionMap := make(map[int64]*ws.QuestionData)
-
-	for questionRows.Next() {
-		var qStr, aStr string
-		var qID, aID int64
-
-		err = questionRows.Scan(&qID, &qStr, &aStr, &aID)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
+	// Триггерим старт игры через Hub
+	go func() {
+		if err := g.hub.StartGame(input.SessionId, hostID); err != nil {
+			log.Println("hub.StartGame error:", err)
 		}
-		if _, ok := questionMap[qID]; !ok {
-			questionMap[qID] = &ws.QuestionData{
-				ID:      qID,
-				Text:    qStr,
-				Answers: []ws.AnswerData{},
-			}
-		}
-		questionMap[qID].Answers = append(questionMap[qID].Answers, ws.AnswerData{
-			ID:   aID,
-			Text: aStr,
-		})
-	}
-	gameQuestions := make([]ws.QuestionData, 0, len(questionMap))
+	}()
 
-	for _, q := range questionMap {
-		gameQuestions = append(gameQuestions, *q)
-	}
-	g.hub.GameSessions[input.SessionId] = &ws.GameSessionState{
-		Questions:    gameQuestions,
-		CurrentIndex: 0,
-	}
-
-	g.hub.BroadcastQuestion(input.SessionId, timeLimit)
+	c.JSON(200, gin.H{"status": "game_started"})
 }
 
 func (g *GameSessionController) End(c *gin.Context) {

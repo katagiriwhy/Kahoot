@@ -2,6 +2,7 @@ package ws
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -187,6 +188,74 @@ func (h *Hub) getPlayers(sessionId int64) ([]Player, error) {
 
 	return players, nil
 }
+
+func (h *Hub) StartGame(sessionID int64, hostID int64) error {
+	h.mu.Lock()
+	if _, exists := h.GameSessions[sessionID]; exists {
+		h.mu.Unlock()
+		return fmt.Errorf("session already started")
+	}
+	h.mu.Unlock()
+
+	// Получаем quiz_id и time_limit
+	var quizID int64
+	var timeLimit int16
+	if err := h.db.QueryRow(context.Background(), `
+        SELECT gs.quiz_id, q.time_limit
+        FROM game_sessions gs
+        JOIN quizzes q ON gs.quiz_id = q.id
+        WHERE gs.id=$1`, sessionID).Scan(&quizID, &timeLimit); err != nil {
+		return err
+	}
+
+	// Загружаем вопросы и ответы
+	rows, err := h.db.Query(context.Background(), `
+        SELECT q.id, q.question_text, a.id, a.answer_text
+        FROM questions q
+        JOIN answers a ON q.id = a.question_id
+        WHERE q.quiz_id=$1
+        ORDER BY q.id, a.id`, quizID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	qMap := make(map[int64]*QuestionData)
+	for rows.Next() {
+		var qID, aID int64
+		var qText, aText string
+		if err := rows.Scan(&qID, &qText, &aID, &aText); err != nil {
+			return err
+		}
+		if _, ok := qMap[qID]; !ok {
+			qMap[qID] = &QuestionData{ID: qID, Text: qText, Answers: []AnswerData{}}
+		}
+		qMap[qID].Answers = append(qMap[qID].Answers, AnswerData{ID: aID, Text: aText})
+	}
+
+	gameQuestions := make([]QuestionData, 0, len(qMap))
+	for _, q := range qMap {
+		gameQuestions = append(gameQuestions, *q)
+	}
+
+	log.Println("gameQuestions:", gameQuestions)
+	gs := &GameSessionState{
+		Questions:    gameQuestions,
+		CurrentIndex: 0,
+		Answers:      make(map[int64]map[int64]int64),
+		Scores:       make(map[int64]int),
+		HostID:       hostID,
+	}
+
+	h.mu.Lock()
+	h.GameSessions[sessionID] = gs
+	h.mu.Unlock()
+
+	// Рассылаем первый вопрос
+	h.BroadcastQuestion(sessionID, timeLimit)
+	return nil
+}
+
 func (h *Hub) BroadcastQuestion(sessionId int64, timeLimit int16) {
 	h.mu.RLock()
 	clients, ok := h.Clients[sessionId]
@@ -224,8 +293,126 @@ func (h *Hub) BroadcastQuestion(sessionId int64, timeLimit int16) {
 	for client := range clients {
 		select {
 		case client.Send <- data:
+			log.Printf("[Hub] BroadcastQuestion SENT QUESTION TO client=%d", client)
+		default:
+			log.Printf("[Hub] client channel full, skipping send user=%d", client.UserID)
+			//h.Unregister <- client
+		}
+	}
+}
+
+func (h *Hub) SubmitAnswer(sessionID int64, userID int64, questionID int64, answerID int64) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	session, ok := h.GameSessions[sessionID]
+	if !ok {
+		return
+	}
+	if _, exists := session.Answers[questionID]; !exists {
+		session.Answers[questionID] = make(map[int64]int64)
+	}
+	session.Answers[questionID][userID] = answerID
+}
+
+func (h *Hub) EndQuestion(sessionID int64) {
+	h.mu.Lock()
+	session, ok := h.GameSessions[sessionID]
+	if !ok {
+		h.mu.Unlock()
+		return
+	}
+	if session.CurrentIndex >= len(session.Questions) {
+		h.mu.Unlock()
+		return
+	}
+	question := session.Questions[session.CurrentIndex]
+	h.mu.Unlock()
+
+	var correctID int64
+	err := h.db.QueryRow(context.Background(),
+		`SELECT id FROM answers WHERE question_id=$1 AND is_correct = true LIMIT 1`, question.ID).Scan(&correctID)
+	if err != nil {
+		log.Println("can't get correct answer:", err)
+	}
+
+	h.mu.Lock()
+	answersForQ := session.Answers[question.ID]
+
+	clients := h.Clients[sessionID]
+	players := make([]map[string]any, 0, len(clients))
+	for client := range clients {
+		uid := client.UserID
+		var nick string
+		_ = h.db.QueryRow(context.Background(), `SELECT nickname FROM session_players WHERE session_id=$1 AND user_id=$2`, sessionID, uid).Scan(&nick)
+		if answersForQ != nil {
+			if ans, ok := answersForQ[uid]; ok && ans == correctID {
+				session.Scores[uid] += 1
+			}
+		}
+		players = append(players, map[string]any{
+			"user_id":  uid,
+			"nickname": nick,
+			"score":    session.Scores[uid],
+		})
+	}
+	h.mu.Unlock()
+
+	msg := map[string]any{
+		"type":            "question_end",
+		"questionId":      question.ID,
+		"correctAnswerId": correctID,
+		"players":         players,
+	}
+	data, _ := json.Marshal(msg)
+	h.mu.RLock()
+	clients2 := h.Clients[sessionID]
+	h.mu.RUnlock()
+	for client := range clients2 {
+		select {
+		case client.Send <- data:
 		default:
 			h.Unregister <- client
 		}
+	}
+}
+
+func (h *Hub) NextQuestion(sessionID int64, userID int64, timeLimit int16) {
+	h.mu.Lock()
+	session, ok := h.GameSessions[sessionID]
+	if !ok {
+		h.mu.Unlock()
+		return
+	}
+	if session.HostID != userID {
+		h.mu.Unlock()
+		return
+	}
+	session.CurrentIndex++
+
+	h.mu.Unlock()
+
+	h.BroadcastQuestion(sessionID, timeLimit)
+
+	h.mu.RLock()
+	s := h.GameSessions[sessionID]
+	more := s.CurrentIndex < len(s.Questions)
+	h.mu.RUnlock()
+	if !more {
+
+		msg := map[string]any{"type": "game_finished", "scores": s.Scores}
+		data, _ := json.Marshal(msg)
+		h.mu.RLock()
+		clients := h.Clients[sessionID]
+		h.mu.RUnlock()
+		for client := range clients {
+			select {
+			case client.Send <- data:
+			default:
+				h.Unregister <- client
+			}
+		}
+		h.mu.Lock()
+		delete(h.GameSessions, sessionID)
+		h.mu.Unlock()
 	}
 }

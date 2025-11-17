@@ -1,39 +1,31 @@
 import { useEffect, useState } from "react";
 import { useSocket } from "../context/SocketContext";
-import "../styles/finalPage.css";
 
 export function FinalPage() {
-    const [results, setResults] = useState<{nickname: string, score: number, rank: number}[]>([]);
-    const { ws } = useSocket();
+    const { subscribe, leaveSession } = useSocket();
+    const [results, setResults] = useState<any[]>([]);
 
     useEffect(() => {
-        if (!ws) return;
-
-        ws.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-            if (data.type === "quiz_finished") {
-                setResults(data.results);
+        const unsub = subscribe(msg => {
+            if (msg.type === "game_results" || msg.type === "game_finished" || msg.type === "game_over") {
+                // normalize whatever server sends
+                setResults(msg.results ?? msg.scores ?? []);
             }
-        };
-    }, [ws]);
+        });
+        return unsub;
+    }, [subscribe]);
+
+    const exit = () => {
+        // user finished the game — explicitly leave session & close ws
+        leaveSession();
+        // navigate back to home (call navigate from component if needed)
+    };
 
     return (
-        <div className="final-page">
-            <h1>Итоговые результаты</h1>
-            <table>
-                <thead>
-                <tr><th>Место</th><th>Игрок</th><th>Баллы</th></tr>
-                </thead>
-                <tbody>
-                {results.map(r => (
-                    <tr key={r.nickname}>
-                        <td>{r.rank}</td>
-                        <td>{r.nickname}</td>
-                        <td>{r.score}</td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
+        <div>
+            <h2>Final Results</h2>
+            <ul>{results.map(r => <li key={r.player_id ?? r.user_id}>{r.nickname}: {r.score}</li>)}</ul>
+            <button onClick={exit}>Exit</button>
         </div>
     );
 }

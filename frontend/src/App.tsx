@@ -7,11 +7,14 @@ import Home from './components/Home';
 import QuizCreate from "./components/QuizCreate.tsx";
 import CreateQuestions from "./components/CreateQuestions.tsx";
 import Lobby from "./components/Lobby.tsx";
-import { SocketProvider } from './context/SocketContext'; // ← импортируем контекст
+import { SocketProvider } from './context/SocketContext';
+import {QuestionPage} from "./components/QuestionPage.tsx";
+import {InterimPage} from "./components/InterimPage.tsx";
+import {FinalPage} from "./components/FinalPage.tsx";
 
 function App() {
     return (
-        <SocketProvider> {}
+        <SocketProvider>
             <Router>
                 <Routes>
                     <Route path="/" element={<TempHome />} />
@@ -21,6 +24,10 @@ function App() {
                     <Route path="/newquiz" element={<QuizCreate />} />
                     <Route path="/new-question" element={<CreateQuestions />} />
                     <Route path="/lobby/:id" element={<Lobby />} />
+
+                    <Route path="/question" element={<QuestionPage isHost={false} />} />
+                    <Route path="/interim/:questionId" element={<InterimPage isHost={false} />} />
+                    <Route path="/final" element={<FinalPage />} />
                 </Routes>
             </Router>
         </SocketProvider>

@@ -77,7 +77,7 @@ func NewRoutes(con *controllers.Controllers) *gin.Engine {
 	sessions := auth.Group("/game-sessions")
 	{
 		sessions.POST("", con.GameSessionController.Create)
-		sessions.POST("/start", con.GameSessionController.Start)
+		//sessions.POST("/start", con.GameSessionController.Start)
 		sessions.DELETE("/:id/end", con.GameSessionController.End)
 		sessions.GET("/:id/players", con.SessionPlayersController.Get)
 		sessions.GET("/:id/exists", con.GameSessionController.Exists)
