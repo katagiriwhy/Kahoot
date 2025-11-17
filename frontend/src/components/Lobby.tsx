@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
 
@@ -11,18 +11,26 @@ export default function Lobby() {
     const { connectToSession, subscribe, send, leaveSession } = useSocket();
 
     const [players, setPlayers] = useState<Player[]>([]);
+    const navigatedRef = useRef(false);
 
     useEffect(() => {
         // connectToSession will create socket only once per session
         connectToSession(Number(id));
+        navigatedRef.current = false; // Reset when lobby mounts
     }, [id, connectToSession]);
 
     useEffect(() => {
         // subscribe to ws messages, and hydrate immediately if last lobby_update exists
         const unsub = subscribe((data) => {
             if (data.type === "lobby_update") setPlayers(data.players ?? []);
-            if (data.type === "lobby_closed") navigate("/");
-            if (data.type === "question") navigate("/question", { state: { isHost } });
+            if (data.type === "lobby_closed" && !navigatedRef.current) {
+                navigatedRef.current = true;
+                navigate("/");
+            }
+            if (data.type === "question" && !navigatedRef.current) {
+                navigatedRef.current = true;
+                navigate("/question", { state: { isHost } });
+            }
         });
         return unsub;
     }, [subscribe, navigate, isHost]);

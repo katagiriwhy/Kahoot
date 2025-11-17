@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
 
@@ -15,6 +15,8 @@ export function QuestionPage() {
     const [timeLeft, setTimeLeft] = useState(15);
     const [answerSent, setAnswerSent] = useState(false);
     const [navigated, setNavigated] = useState(false);
+    const navigatedToInterimRef = useRef(false);
+    const navigatedToFinalRef = useRef(false);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -47,31 +49,52 @@ export function QuestionPage() {
                 setSelected(null);
                 setAnswerSent(false);
                 setNavigated(false);
+                navigatedToInterimRef.current = false; // Reset when new question arrives
+                navigatedToFinalRef.current = false;
             }
-            if (msg.type === "question_end") {
+            if (msg.type === "question_end" && !navigatedToInterimRef.current) {
+                navigatedToInterimRef.current = true;
                 navigate(`/interim/${msg.questionId}`, { state: { isHost } });
             }
             if (msg.type === "lobby_closed") {
                 navigate("/");
             }
-            if (msg.type === "game_finished" || msg.type === "game_results") {
+            if ((msg.type === "game_finished" || msg.type === "game_results") && !navigatedToFinalRef.current) {
+                navigatedToFinalRef.current = true;
                 navigate("/final");
             }
         });
         return unsub;
     }, [subscribe, navigate]);
 
+    // Send answer immediately when selected (for players)
+    useEffect(() => {
+        if (!question || isHost || answerSent) return;
+        if (selected !== null) {
+            send("answer", { answer_id: selected });
+            setAnswerSent(true);
+        }
+    }, [selected, question, isHost, answerSent, send]);
+
     useEffect(() => {
         if (!question) return;
         
         // When timer reaches 0, navigate to interim page
-        if (timeLeft <= 0 && !navigated) {
-            // For players, send the answer if we have one and haven't sent it yet
+        if (timeLeft <= 0 && !navigated && !navigatedToInterimRef.current) {
+            // For players, send the answer if we have one and haven't sent it yet (fallback)
             if (!isHost && !answerSent && selected !== null) {
                 send("answer", { answer_id: selected });
                 setAnswerSent(true);
             }
+            // Host sends end_question to trigger server to send question_end message
+            // Add a small delay to ensure all players have submitted their answers
+            if (isHost) {
+                setTimeout(() => {
+                    send("end_question", {});
+                }, 500); // 500ms delay to allow late submissions
+            }
             // Navigate to interim page
+            navigatedToInterimRef.current = true;
             navigate(`/interim/${question.id}`, { state: { isHost } });
             setNavigated(true);
             return;

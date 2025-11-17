@@ -327,8 +327,9 @@ func (h *Hub) EndQuestion(sessionID int64) {
 	h.mu.Unlock()
 
 	var correctID int64
+	var correctText string
 	err := h.db.QueryRow(context.Background(),
-		`SELECT id FROM answers WHERE question_id=$1 AND is_correct = true LIMIT 1`, question.ID).Scan(&correctID)
+		`SELECT id, answer_text FROM answers WHERE question_id=$1 AND is_correct = true LIMIT 1`, question.ID).Scan(&correctID, &correctText)
 	if err != nil {
 		log.Println("can't get correct answer:", err)
 	}
@@ -356,10 +357,11 @@ func (h *Hub) EndQuestion(sessionID int64) {
 	h.mu.Unlock()
 
 	msg := map[string]any{
-		"type":            "question_end",
-		"questionId":      question.ID,
-		"correctAnswerId": correctID,
-		"players":         players,
+		"type":              "question_end",
+		"questionId":        question.ID,
+		"correctAnswerId":   correctID,
+		"correctAnswerText": correctText,
+		"players":           players,
 	}
 	data, _ := json.Marshal(msg)
 	h.mu.RLock()
@@ -396,13 +398,35 @@ func (h *Hub) NextQuestion(sessionID int64, userID int64, timeLimit int16) {
 	more := s.CurrentIndex < len(s.Questions)
 	h.mu.RUnlock()
 	if !more {
-
-		msg := map[string]any{"type": "game_finished", "scores": s.Scores}
-		data, _ := json.Marshal(msg)
+		// Build players list with scores and nicknames
 		h.mu.RLock()
 		clients := h.Clients[sessionID]
 		h.mu.RUnlock()
+
+		players := make([]map[string]any, 0, len(clients))
 		for client := range clients {
+			uid := client.UserID
+			var nick string
+			_ = h.db.QueryRow(context.Background(),
+				`SELECT nickname FROM session_players WHERE session_id=$1 AND user_id=$2`,
+				sessionID, uid).Scan(&nick)
+			players = append(players, map[string]any{
+				"user_id":  uid,
+				"nickname": nick,
+				"score":    s.Scores[uid],
+			})
+		}
+
+		msg := map[string]any{
+			"type":    "game_finished",
+			"scores":  s.Scores,
+			"players": players,
+		}
+		data, _ := json.Marshal(msg)
+		h.mu.RLock()
+		clients2 := h.Clients[sessionID]
+		h.mu.RUnlock()
+		for client := range clients2 {
 			select {
 			case client.Send <- data:
 			default:

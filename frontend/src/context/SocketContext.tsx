@@ -19,6 +19,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const sessionIdRef = useRef<number | null>(null);
     const lastLobbyUpdate = useRef<any | null>(null);
     const lastQuestion = useRef<any | null>(null);
+    const lastQuestionEnd = useRef<any | null>(null);
     const [, setConnected] = useState(false);
 
     // helper: dispatch to handlers
@@ -26,6 +27,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         // cache updates so new subscribers can be hydrated
         if (data?.type === "lobby_update") lastLobbyUpdate.current = data;
         if (data?.type === "question") lastQuestion.current = data;
+        if (data?.type === "question_end") lastQuestionEnd.current = data;
         handlers.current.forEach(h => {
             try { h(data); } catch (e) { console.error("ws handler", e); }
         });
@@ -87,9 +89,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         wsRef.current = null;
         sessionIdRef.current = null;
         setConnected(false);
-        // optionally clear cached lobby/question update:
+        // optionally clear cached lobby/question/question_end update:
         lastLobbyUpdate.current = null;
         lastQuestion.current = null;
+        lastQuestionEnd.current = null;
     }, []);
 
     const send = useCallback((type: string, payload: any = {}) => {
@@ -105,12 +108,15 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     const subscribe = useCallback((handler: WSMessageHandler) => {
         handlers.current.add(handler);
-        // If we have a cached lobby_update, immediately call the handler so UI hydrates instantly
+        // If we have cached messages, immediately call the handler so UI hydrates instantly
         if (lastLobbyUpdate.current) {
             try { handler(lastLobbyUpdate.current); } catch (e) { console.error(e); }
         }
         if (lastQuestion.current) {
             try { handler(lastQuestion.current); } catch (e) { console.error(e); }
+        }
+        if (lastQuestionEnd.current) {
+            try { handler(lastQuestionEnd.current); } catch (e) { console.error(e); }
         }
         return () => handlers.current.delete(handler);
     }, []);

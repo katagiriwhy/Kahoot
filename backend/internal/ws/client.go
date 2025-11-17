@@ -207,6 +207,24 @@ func (c *Client) ReadPump(hub *Hub) {
 			log.Printf("[ReadPump] answer accepted user=%d q=%d ans=%d",
 				c.UserID, questionID, answerID)
 
+		case "end_question":
+			log.Printf("[ReadPump] END_QUESTION by user %d", c.UserID)
+
+			var hostID int64
+			err := hub.db.QueryRow(context.Background(),
+				`SELECT host_id FROM game_sessions WHERE id = $1`, c.SessionID,
+			).Scan(&hostID)
+			if err != nil {
+				log.Printf("[ReadPump] end_question failed: cannot get host_id: %v", err)
+				continue
+			}
+			if hostID != c.UserID {
+				log.Printf("[ReadPump] ONLY HOST CAN END QUESTION user=%d session=%d", c.UserID, c.SessionID)
+				continue
+			}
+
+			hub.EndQuestion(c.SessionID)
+
 		case "next_question":
 			log.Printf("[ReadPump] NEXT QUESTION by user %d", c.UserID)
 
