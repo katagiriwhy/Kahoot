@@ -25,8 +25,8 @@ function App() {
                     <Route path="/new-question" element={<CreateQuestions />} />
                     <Route path="/lobby/:id" element={<Lobby />} />
 
-                    <Route path="/question" element={<QuestionPage isHost={false} />} />
-                    <Route path="/interim/:questionId" element={<InterimPage isHost={false} />} />
+                    <Route path="/question" element={<QuestionPage />} />
+                    <Route path="/interim/:questionId" element={<InterimPage />} />
                     <Route path="/final" element={<FinalPage />} />
                 </Routes>
             </Router>

@@ -197,7 +197,6 @@ func (h *Hub) StartGame(sessionID int64, hostID int64) error {
 	}
 	h.mu.Unlock()
 
-	// Получаем quiz_id и time_limit
 	var quizID int64
 	var timeLimit int16
 	if err := h.db.QueryRow(context.Background(), `
@@ -208,7 +207,6 @@ func (h *Hub) StartGame(sessionID int64, hostID int64) error {
 		return err
 	}
 
-	// Загружаем вопросы и ответы
 	rows, err := h.db.Query(context.Background(), `
         SELECT q.id, q.question_text, a.id, a.answer_text
         FROM questions q

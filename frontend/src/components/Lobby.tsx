@@ -22,10 +22,10 @@ export default function Lobby() {
         const unsub = subscribe((data) => {
             if (data.type === "lobby_update") setPlayers(data.players ?? []);
             if (data.type === "lobby_closed") navigate("/");
-            if (data.type === "question") navigate("/question");
+            if (data.type === "question") navigate("/question", { state: { isHost } });
         });
         return unsub;
-    }, [subscribe, navigate]);
+    }, [subscribe, navigate, isHost]);
 
     const startGame = () => send("start_game", { session_id: Number(id) });
 

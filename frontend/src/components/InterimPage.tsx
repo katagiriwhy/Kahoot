@@ -1,19 +1,21 @@
 import { useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
 
-export function InterimPage({ isHost }: { isHost: boolean }) {
+export function InterimPage() {
     const { questionId } = useParams<{ questionId: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
+    const isHost = location.state?.isHost ?? false;
     const { subscribe, send } = useSocket();
 
     useEffect(() => {
         const unsub = subscribe(msg => {
-            if (msg.type === "next_question") navigate("/question");
+            if (msg.type === "next_question") navigate("/question", { state: { isHost } });
             if (msg.type === "game_finished" || msg.type === "game_results") navigate("/final");
         });
         return unsub;
-    }, [subscribe, navigate]);
+    }, [subscribe, navigate, isHost]);
 
     const next = () => {
         if (!isHost) return;
