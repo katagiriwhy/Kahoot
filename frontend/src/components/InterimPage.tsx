@@ -103,7 +103,7 @@ export function InterimPage() {
                     navigate("/final");
                 }
             }
-        });
+        }, { replay: ["question_end", "game_finished", "game_results", "game_over"] });
         
         return () => {
             clearTimeout(skipTimeout);

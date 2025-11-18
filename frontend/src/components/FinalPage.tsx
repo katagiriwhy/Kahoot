@@ -34,7 +34,7 @@ export function FinalPage() {
                     setPlayers(playersArray);
                 }
             }
-        });
+        }, { replay: ["game_finished", "game_results", "game_over"] });
         return unsub;
     }, [subscribe]);
 

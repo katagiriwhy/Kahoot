@@ -6,7 +6,7 @@ import "../styles/createQuestions.css";
 const CreateQuestions = () => {
     const [quizId, setQuizId] = useState("");
     const [questionText, setQuestionText] = useState("");
-    const [points, setPoints] = useState(1);
+    const [points, setPoints] = useState(100);
     const [answers, setAnswers] = useState([
         { answer_text: "", is_correct: false },
         { answer_text: "", is_correct: false },
@@ -63,7 +63,7 @@ const CreateQuestions = () => {
 
             setQuizId("");
             setQuestionText("");
-            setPoints(1);
+            setPoints(100);
             setAnswers([
                 { answer_text: "", is_correct: false },
                 { answer_text: "", is_correct: false },

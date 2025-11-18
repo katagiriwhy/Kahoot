@@ -31,7 +31,7 @@ export default function Lobby() {
                 navigatedRef.current = true;
                 navigate("/question", { state: { isHost } });
             }
-        });
+        }, { replay: ["lobby_update", "question"] });
         return unsub;
     }, [subscribe, navigate, isHost]);
 

@@ -2,11 +2,23 @@ import React, { createContext, useContext, useRef, useCallback, useState } from 
 
 type WSMessageHandler = (data: any) => void;
 
+type ReplayableMessageType =
+    | "lobby_update"
+    | "question"
+    | "question_end"
+    | "game_finished"
+    | "game_results"
+    | "game_over";
+
+interface SubscribeOptions {
+    replay?: ReplayableMessageType[];
+}
+
 interface SocketContextType {
     connectToSession: (sessionId: number) => void;
     leaveSession: () => void;
     send: (type: string, payload?: any) => void;
-    subscribe: (handler: WSMessageHandler) => () => void;
+    subscribe: (handler: WSMessageHandler, options?: SubscribeOptions) => () => void;
     getLastLobbyUpdate: () => any | null;
     isConnected: () => boolean;
 }
@@ -20,6 +32,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const lastLobbyUpdate = useRef<any | null>(null);
     const lastQuestion = useRef<any | null>(null);
     const lastQuestionEnd = useRef<any | null>(null);
+    const lastGameResults = useRef<any | null>(null);
     const [, setConnected] = useState(false);
 
     // helper: dispatch to handlers
@@ -28,6 +41,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         if (data?.type === "lobby_update") lastLobbyUpdate.current = data;
         if (data?.type === "question") lastQuestion.current = data;
         if (data?.type === "question_end") lastQuestionEnd.current = data;
+        if (data?.type === "game_finished" || data?.type === "game_results" || data?.type === "game_over") {
+            lastGameResults.current = data;
+        }
         handlers.current.forEach(h => {
             try { h(data); } catch (e) { console.error("ws handler", e); }
         });
@@ -122,6 +138,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         lastLobbyUpdate.current = null;
         lastQuestion.current = null;
         lastQuestionEnd.current = null;
+        lastGameResults.current = null;
     }, []);
 
     const send = useCallback((type: string, payload: any = {}) => {
@@ -135,19 +152,26 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         }
     }, []);
 
-    const subscribe = useCallback((handler: WSMessageHandler) => {
+    const subscribe = useCallback((handler: WSMessageHandler, options?: SubscribeOptions) => {
         handlers.current.add(handler);
-        // If we have cached messages, immediately call the handler so UI hydrates instantly
-        if (lastLobbyUpdate.current) {
-            try { handler(lastLobbyUpdate.current); } catch (e) { console.error(e); }
-        }
-        // Replay cached question - QuestionPage needs it, but InterimPage should ignore it
-        if (lastQuestion.current) {
-            try { handler(lastQuestion.current); } catch (e) { console.error(e); }
-        }
-        if (lastQuestionEnd.current) {
-            try { handler(lastQuestionEnd.current); } catch (e) { console.error(e); }
-        }
+        const replayTypes = options?.replay ?? [];
+        replayTypes.forEach(type => {
+            if (type === "lobby_update" && lastLobbyUpdate.current) {
+                try { handler(lastLobbyUpdate.current); } catch (e) { console.error(e); }
+            }
+            if (type === "question" && lastQuestion.current) {
+                try { handler(lastQuestion.current); } catch (e) { console.error(e); }
+            }
+            if (type === "question_end" && lastQuestionEnd.current) {
+                try { handler(lastQuestionEnd.current); } catch (e) { console.error(e); }
+            }
+            if ((type === "game_finished" || type === "game_results" || type === "game_over")
+                && lastGameResults.current
+                && (lastGameResults.current.type === type
+                    || ["game_finished", "game_results", "game_over"].includes(lastGameResults.current.type))) {
+                try { handler(lastGameResults.current); } catch (e) { console.error(e); }
+            }
+        });
         return () => handlers.current.delete(handler);
     }, []);
 

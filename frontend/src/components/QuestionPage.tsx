@@ -63,7 +63,7 @@ export function QuestionPage() {
                 navigatedToFinalRef.current = true;
                 navigate("/final");
             }
-        });
+        }, { replay: ["question"] });
         return unsub;
     }, [subscribe, navigate]);
 
