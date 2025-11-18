@@ -1,85 +1,81 @@
 .lobby-container {
-    max-width: 600px;
-    margin: 50px auto;
-    padding: 30px;
-    background: linear-gradient(135deg, #6b73ff, #000dff);
-    border-radius: 20px;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-    color: #fff;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    text-align: center;
-    animation: fadeIn 1s ease-in-out;
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 25px 35px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    animation: fadeIn 0.5s ease;
 }
 
 .lobby-container h1 {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
-    text-shadow: 1px 1px 5px rgba(0,0,0,0.5);
-    animation: slideDown 0.8s ease forwards;
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 25px;
+    animation: slideDown 0.6s ease;
 }
 
-.lobby-container h3 {
-    margin-top: 20px;
-    font-size: 1.5rem;
-    letter-spacing: 1px;
-}
-
-.lobby-container ul {
+.players-list {
     list-style: none;
     padding: 0;
-    margin: 20px 0;
+    margin-bottom: 30px;
 }
 
-.lobby-container ul li {
-    background: rgba(255, 255, 255, 0.1);
+.players-list li {
+    background: #eaf1ff;
+    padding: 12px 16px;
     margin: 10px 0;
-    padding: 10px 15px;
-    border-radius: 15px;
-    font-size: 1.2rem;
-    transition: transform 0.3s ease, background 0.3s ease;
-    animation: fadeInUp 0.5s ease forwards;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    animation: fadeInUp 0.4s ease;
 }
 
-.lobby-container ul li:hover {
-    transform: scale(1.05);
-    background: rgba(255, 255, 255, 0.2);
+.lobby-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
 }
 
-.lobby-container button {
-    padding: 12px 25px;
-    margin: 10px 10px 0 10px;
-    font-size: 1rem;
-    font-weight: 600;
+.lobby-btn {
+    padding: 12px 22px;
+    font-size: 1.1rem;
     border-radius: 12px;
     border: none;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    color: #fff;
-    background: linear-gradient(45deg, #ff416c, #ff4b2b);
+    background: #7ea8ff;
+    color: white;
+    transition: 0.25s ease;
 }
 
-.lobby-container button:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+.lobby-btn:hover {
+    transform: translateY(-3px);
+    background: #6b97f8;
 }
 
-.lobby-container button:active {
-    transform: translateY(0) scale(1);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+.lobby-btn:active {
+    transform: scale(0.95);
+}
+
+.leave-btn {
+    background: #ff7e7e;
+}
+
+.leave-btn:hover {
+    background: #f76666;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-30px); }
+    from { opacity: 0; transform: translateY(-20px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
 }

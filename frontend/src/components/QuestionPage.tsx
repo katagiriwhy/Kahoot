@@ -1,12 +1,16 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
+import "../styles/questionPage.css"
 
 type Question = {
     id: number;
     text: string;
     answers: { id: number; text: string }[];
     timeLimit: number;
+    points: number;
+    image?: string | null;
+    imageType?: string | null;
 };
 
 export function QuestionPage() {
@@ -28,6 +32,9 @@ export function QuestionPage() {
             if (!raw) return null;
             const q = raw.question ?? raw;
             if (!q) return null;
+            const points = q.points ?? q.Points ?? 1;
+            const image = q.image ?? raw.image ?? null;
+            const imageType = q.imageType ?? raw.imageType ?? null;
             return {
                 id: q.id ?? q.ID,
                 text: q.text ?? q.Text ?? "",
@@ -36,6 +43,9 @@ export function QuestionPage() {
                     text: a.text ?? a.Text ?? "",
                 })),
                 timeLimit: raw.timeLimit ?? q.timeLimit ?? q.TimeLimit ?? 15,
+                points,
+                image,
+                imageType,
             };
         };
 
@@ -67,7 +77,6 @@ export function QuestionPage() {
         return unsub;
     }, [subscribe, navigate]);
 
-    // Send answer immediately when selected (for players)
     useEffect(() => {
         if (!question || isHost || answerSent) return;
         if (selected !== null) {
@@ -78,34 +87,30 @@ export function QuestionPage() {
 
     useEffect(() => {
         if (!question) return;
-        
-        // Stop timer if we've already navigated
+
         if (navigated || navigatedToInterimRef.current) {
             return;
         }
-        
-        // When timer reaches 0, navigate to interim page
+
         if (timeLeft <= 0) {
-            // For players, send the answer if we have one and haven't sent it yet (fallback)
+
             if (!isHost && !answerSent && selected !== null) {
                 send("answer", { answer_id: selected });
                 setAnswerSent(true);
             }
-            // Host sends end_question to trigger server to send question_end message
-            // Add a small delay to ensure all players have submitted their answers
+
             if (isHost) {
                 setTimeout(() => {
                     send("end_question", {});
-                }, 500); // 500ms delay to allow late submissions
+                }, 500);
             }
-            // Navigate to interim page
+
             navigatedToInterimRef.current = true;
             setNavigated(true);
             navigate(`/interim/${question.id}`, { state: { isHost } });
             return;
         }
-        
-        // Continue countdown
+
         const t = setTimeout(() => {
             if (!navigated && !navigatedToInterimRef.current) {
                 setTimeLeft(s => Math.max(0, s - 1));
@@ -116,19 +121,31 @@ export function QuestionPage() {
 
      if (!question) return <p>Loading question...</p>;
 
+    const imageSrc = question.image
+        ? (question.image.startsWith("data:")
+            ? question.image
+            : `data:${question.imageType ?? "image/png"};base64,${question.image}`)
+        : null;
+
     return (
-        <div>
+        <div className="question-container">
             <h2>{question.text}</h2>
-            <ul>
+            <p>Points for this question: {question.points}</p>
+            {imageSrc && <img src={imageSrc} alt="Question" />}
+            <ul className="answers-list">
                 {question.answers.map(a => (
                     <li key={a.id}>
-                        <button disabled={isHost || selected !== null} onClick={() => setSelected(a.id)}>
+                        <button
+                            className="answer-btn"
+                            disabled={isHost || selected !== null}
+                            onClick={() => setSelected(a.id)}
+                        >
                             {a.text}
                         </button>
                     </li>
                 ))}
             </ul>
-            <p>Time left: {timeLeft}s</p>
+            <p className="timer">Time left: {timeLeft}s</p>
         </div>
     );
 }

@@ -31,7 +31,6 @@ function Login() {
         try {
             console.log("Sending:", formData);
 
-            // Добавляем withCredentials
             const response = await api.post(LOGIN_URL, formData, {
                 withCredentials: true,
             });
@@ -41,7 +40,7 @@ function Login() {
 
             console.log("✅ Login successful!", response.data);
 
-            navigate("/"); // Перенаправляем на главную или лобби
+            navigate("/");
         } catch (err: any) {
             console.error(err);
             setError(err?.response?.data?.error || "Ошибка входа");

@@ -60,13 +60,11 @@ func (c *Client) WritePump() {
 				}
 				return
 			}
-			// Send each message as a separate WebSocket frame to avoid concatenation
 			if err := c.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
 				log.Println("write:", err)
 				return
 			}
 
-			// Drain any additional messages and send them separately
 		drain:
 			for {
 				select {
@@ -82,7 +80,6 @@ func (c *Client) WritePump() {
 						return
 					}
 				default:
-					// No more messages, break out of drain loop
 					break drain
 				}
 			}

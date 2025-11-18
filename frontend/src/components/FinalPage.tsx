@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
+import "../styles/finalPage.css"
 
 type Player = {
     user_id: number;
@@ -24,7 +25,7 @@ export function FinalPage() {
                         score: typeof p.score === 'string' ? parseInt(p.score) : p.score,
                     })));
                 } else if (msg.scores) {
-                    // Fallback: if only scores map is sent, convert to array format
+
                     const scoresMap = msg.scores;
                     const playersArray: Player[] = Object.entries(scoresMap).map(([userId, score]) => ({
                         user_id: parseInt(userId),
@@ -39,13 +40,10 @@ export function FinalPage() {
     }, [subscribe]);
 
     const exit = () => {
-        // User finished the game — explicitly leave session & close ws
         leaveSession();
-        // Navigate back to home
         navigate("/home");
     };
 
-    // Sort players by score (descending) and get top 3
     const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
     const top3 = sortedPlayers.slice(0, 3);
 

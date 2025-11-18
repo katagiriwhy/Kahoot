@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
+import "../styles/lobby.css"
 
 type Player = { id: number; nickname: string };
 
@@ -14,13 +15,12 @@ export default function Lobby() {
     const navigatedRef = useRef(false);
 
     useEffect(() => {
-        // connectToSession will create socket only once per session
         connectToSession(Number(id));
-        navigatedRef.current = false; // Reset when lobby mounts
+        navigatedRef.current = false;
     }, [id, connectToSession]);
 
     useEffect(() => {
-        // subscribe to ws messages, and hydrate immediately if last lobby_update exists
+
         const unsub = subscribe((data) => {
             if (data.type === "lobby_update") setPlayers(data.players ?? []);
             if (data.type === "lobby_closed" && !navigatedRef.current) {
@@ -38,9 +38,9 @@ export default function Lobby() {
     const startGame = () => send("start_game", { session_id: Number(id) });
 
     const leaveLobby = () => {
-        // Inform server and close socket
+
         send("leave", { session_id: Number(id) });
-        leaveSession(); // ensures socket closed
+        leaveSession();
         navigate("/");
     };
 
@@ -51,7 +51,7 @@ export default function Lobby() {
             headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
             credentials: "include"
         });
-        // If host ends the lobby, server should broadcast lobby_closed; but ensure we also cleanup
+
         leaveSession();
         navigate("/");
     };

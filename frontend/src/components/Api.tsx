@@ -3,9 +3,7 @@ import axios from 'axios';
 export const REGISTER_URL = "/users/register";
 export const LOGIN_URL = "/users/login";
 export const NEW_QUIZ_URL = '/quizzes';
-export const JOIN_URL = '/join';
 export const CREATE_LOBBY_URL = '/game-sessions';
-export const CREATE_QUESTION_URL = '/questions';
 export const CREATE_QUESTION_WITH_ANSWERS_URL = '/questions/answers';
 
 const api = axios.create({
