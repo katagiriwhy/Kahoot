@@ -98,7 +98,7 @@ const CreateQuestions = () => {
 
                         <h3>Answers</h3>
                         {answers.map((ans, index) => (
-                            <div key={index}>
+                            <div key={index} className="answer-row">
                                 <input
                                     type="text"
                                     placeholder={`Answer ${index + 1}`}
@@ -106,7 +106,7 @@ const CreateQuestions = () => {
                                     onChange={(e) => handleAnswerChange(index, "answer_text", e.target.value)}
                                     required
                                 />
-                                <label>
+                                <label className="checkbox-field">
                                     <input
                                         type="checkbox"
                                         checked={ans.is_correct}
@@ -115,21 +115,21 @@ const CreateQuestions = () => {
                                     Correct
                                 </label>
                                 {answers.length > 2 && (
-                                    <button type="button" onClick={() => removeAnswer(index)}>
+                                    <button type="button" className="ghost-action" onClick={() => removeAnswer(index)}>
                                         Remove
                                     </button>
                                 )}
                             </div>
                         ))}
                         {answers.length < 4 && (
-                            <button type="button" onClick={addAnswer}>
+                            <button type="button" className="ghost-action" onClick={addAnswer}>
                                 Add Answer
                             </button>
                         )}
 
-                        {error && <p style={{ color: "red" }}>{error}</p>}
+                        {error && <p className="error-text">{error}</p>}
 
-                        <button type="submit" disabled={loading}>
+                        <button className="submit-btn" type="submit" disabled={loading}>
                             {loading ? "Creating..." : "Create Question"}
                         </button>
                     </form>

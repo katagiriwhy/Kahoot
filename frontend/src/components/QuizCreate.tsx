@@ -12,7 +12,7 @@ function QuizCreate() {
         difficulty: "Легкий",
         is_public: true,
         question_amount: 5,
-        time_limit: 60,
+        time_limit: 15,
         description: "",
     });
 

@@ -1,91 +1,118 @@
 .question-container {
-    max-width: 800px;
-    margin: 30px auto;
-    padding: 20px 30px;
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    animation: fadeIn 0.6s ease;
+    width: min(840px, 94vw);
+    margin: 4rem auto;
+    padding: 3rem 3rem 3.5rem;
+    border-radius: 32px;
+    border: 1px solid var(--border);
+    background: linear-gradient(145deg, rgba(6, 19, 44, 0.94), rgba(1, 7, 20, 0.95));
+    box-shadow: var(--shadow-strong);
+    backdrop-filter: blur(16px);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: center;
+    animation: popCard 0.6s ease both;
 }
 
 .question-container h2 {
-    font-size: 1.8rem;
-    margin-bottom: 10px;
-    text-align: center;
-    animation: slideDown 0.7s ease;
+    font-size: clamp(2rem, 3vw, 2.6rem);
+    margin: 0;
+    letter-spacing: 0.02em;
 }
 
-.question-container img {
-    display: block;
-    max-width: 100%;
-    margin: 15px auto;
-    border-radius: 10px;
-    animation: popIn 0.4s ease;
+.question-points {
+    margin: 0;
+    font-weight: 600;
+    color: var(--primary-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+}
+
+.question-image {
+    width: min(420px, 90%);
+    margin: 0 auto;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 25px 40px rgba(0, 0, 0, 0.35);
+    object-fit: cover;
+    animation: fadeIn 0.6s ease both;
 }
 
 .answers-list {
     list-style: none;
+    margin: 0 auto;
     padding: 0;
-    margin-top: 25px;
+    width: min(520px, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.answers-list li {
+    animation: slideAnswer 0.35s ease both;
 }
 
 .answer-btn {
     width: 100%;
-    padding: 15px;
-    margin: 10px 0;
-    background: #e4efff;
-    border: 2px solid #8bb8ff;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: 0.25s ease;
-    animation: fadeInUp 0.5s ease;
+    border-radius: 18px;
+    padding: 1rem 1.4rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text);
+    font-size: 1.05rem;
+    font-weight: 600;
+    transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
 }
 
 .answer-btn:hover:not(:disabled) {
-    background: #d6e7ff;
-    transform: translateY(-3px);
-}
-
-.answer-btn:active:not(:disabled) {
-    transform: scale(0.96);
+    transform: translateY(-2px);
+    border-color: rgba(92, 244, 255, 0.5);
+    background: rgba(92, 244, 255, 0.08);
 }
 
 .answer-btn:disabled {
-    opacity: 0.55;
+    opacity: 0.6;
     cursor: not-allowed;
 }
 
 .timer {
-    margin-top: 25px;
-    font-size: 1.3rem;
-    font-weight: bold;
-    text-align: center;
-    animation: pulse 1s infinite;
+    margin-top: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.35em;
+    color: #ff8a8a;
+    animation: pulse 1.2s ease infinite;
+}
+
+@keyframes popCard {
+    from {
+        opacity: 0;
+        transform: translateY(35px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideAnswer {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideDown {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes popIn {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.06); }
-    100% { transform: scale(1); }
+    0% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 0.6; transform: scale(1); }
 }

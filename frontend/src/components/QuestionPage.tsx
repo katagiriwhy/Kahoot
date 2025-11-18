@@ -128,10 +128,10 @@ export function QuestionPage() {
         : null;
 
     return (
-        <div className="question-container">
+        <div className="question-container glass-card">
             <h2>{question.text}</h2>
-            <p>Points for this question: {question.points}</p>
-            {imageSrc && <img src={imageSrc} alt="Question" />}
+            <p className="question-points">Points for this question: {question.points}</p>
+            {imageSrc && <img className="question-image" src={imageSrc} alt="Question" />}
             <ul className="answers-list">
                 {question.answers.map(a => (
                     <li key={a.id}>

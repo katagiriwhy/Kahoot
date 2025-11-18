@@ -109,34 +109,48 @@ export function InterimPage() {
     };
 
     return (
-        <div>
-            <h2>Results for question {questionId}</h2>
-            
+        <div className="interim-container glass-card">
+            <header className="interim-header">
+                <p>Reviewing question #{questionId}</p>
+                <h2>Results</h2>
+            </header>
+
             {correctAnswerText && (
-                <div>
-                    <h3>Correct Answer:</h3>
+                <section className="correct-block">
+                    <h3>Correct Answer</h3>
                     <p>{correctAnswerText}</p>
-                </div>
+                </section>
             )}
 
-            <div>
-                <h3>Current Scores:</h3>
+            <section className="score-block">
+                <div className="score-title">
+                    <h3>Leaderboard</h3>
+                    <span>{players.length} participants</span>
+                </div>
                 {players.length > 0 ? (
-                    <ul>
+                    <ul className="score-list">
                         {players
                             .sort((a, b) => b.score - a.score)
-                            .map((player) => (
+                            .map((player, index) => (
                                 <li key={player.user_id}>
-                                    {player.nickname}: {player.score} point{player.score !== 1 ? 's' : ''}
+                                    <span className="rank">{index + 1}</span>
+                                    <div className="score-player">
+                                        <p>{player.nickname}</p>
+                                        <small>{player.score} pts</small>
+                                    </div>
                                 </li>
                             ))}
                     </ul>
                 ) : (
-                    <p>Loading scores...</p>
+                    <p className="loading-state">Loading scores...</p>
                 )}
-            </div>
+            </section>
 
-            {isHost && <button onClick={next}>Next question</button>}
+            {isHost && (
+                <button className="host-btn" onClick={next}>
+                    Next question
+                </button>
+            )}
         </div>
     );
 }

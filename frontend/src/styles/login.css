@@ -1,140 +1,91 @@
-/* Контейнер всей формы */
 .login-container {
-    max-width: 350px;
-    margin: 80px auto;
-    padding: 24px;
-    border-radius: 12px;
-    background: #ffffff;
-    border: 1px solid #ddd;
+    width: min(420px, 92vw);
+    margin: 5rem auto;
+    padding: 2.6rem 2.4rem 3rem;
+    border-radius: 30px;
+    border: 1px solid var(--border);
+    background: linear-gradient(140deg, rgba(5, 14, 34, 0.95), rgba(1, 5, 15, 0.95));
+    box-shadow: var(--shadow-strong);
     text-align: center;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    font-family: Arial, sans-serif;
-
-    /* fade-in */
-    opacity: 0;
-    transform: translateY(20px);
-    animation: fadeIn 0.6s ease forwards;
+    animation: fadeIn 0.6s ease both;
 }
 
-/* Заголовок */
 .login-title {
-    margin-bottom: 16px;
-    font-size: 28px;
-    font-weight: bold;
-    animation: slideDown 0.5s ease;
+    margin: 0 0 1.2rem;
+    font-size: 2.2rem;
+    letter-spacing: 0.05em;
 }
 
-/* Форма */
 .loginform {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-
-    animation: fadeIn 0.8s ease forwards;
+    gap: 0.9rem;
 }
 
-/* Input поля */
 .loginform input {
-    padding: 10px;
-    border-radius: 6px;
-    border: 1px solid #aaa;
-    font-size: 14px;
-    outline: none;
-    transition: 0.25s ease;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 0.9rem 1.1rem;
+    background: rgba(255, 255, 255, 0.02);
 }
 
-/* Hover + focus */
-.loginform input:hover {
-    border-color: #4e83ff;
-}
-
-.loginform input:focus {
-    border-color: #4e83ff;
-    box-shadow: 0 0 6px rgba(78, 131, 255, 0.4);
-}
-
-/* Ошибка */
 .login-error {
-    color: #ff3b3b;
-    font-size: 14px;
-    margin-top: -6px;
-    animation: shake 0.3s ease;
+    color: var(--danger);
+    font-weight: 600;
+    margin: 0.4rem 0 0.2rem;
 }
 
-/* Кнопки */
 .loginform button {
-    padding: 10px;
-    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    border-radius: 18px;
     border: none;
-    font-size: 15px;
-    cursor: pointer;
-    transition: 0.25s ease;
-    background: #4e83ff;
-    color: white;
-    font-weight: bold;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.25s;
 }
 
-/* Hover */
-.loginform button:hover:not(:disabled) {
-    background: #2e63e0;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(78, 131, 255, 0.4);
+.loginform button[type="submit"] {
+    background: linear-gradient(120deg, var(--primary), var(--accent));
+    color: #fff;
+    box-shadow: 0 18px 40px rgba(77, 163, 255, 0.4);
 }
 
-/* Disabled */
+.loginform button[type="submit"]:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 25px 55px rgba(77, 163, 255, 0.5);
+}
+
+.loginform .secondary-btn {
+    background: transparent;
+    color: var(--primary-soft);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 .loginform button:disabled {
-    opacity: 0.6;
+    opacity: 0.45;
     cursor: not-allowed;
 }
 
-/* Reset button */
-.loginform button:nth-of-type(2) {
-    background: #eee;
-    color: black;
-}
-
-.loginform button:nth-of-type(2):hover {
-    background: #ddd;
-}
-
-/* Ссылка */
 .register-text {
-    margin-top: 18px;
-    font-size: 14px;
-    color: #3d6bff;
-    cursor: pointer;
-    transition: 0.3s;
+    margin-top: 1.5rem;
+    color: var(--primary-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.75rem;
 }
 
 .register-text:hover {
-    text-decoration: underline;
-    transform: scale(1.05);
+    color: var(--accent);
 }
-
-/* ====== ✨ АНИМАЦИИ ====== */
 
 @keyframes fadeIn {
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideDown {
     from {
         opacity: 0;
-        transform: translateY(-18px);
+        transform: translateY(35px);
     }
     to {
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-@keyframes shake {
-    0% { transform: translateX(0); }
-    25% { transform: translateX(-4px); }
-    50% { transform: translateX(4px); }
-    75% { transform: translateX(-2px); }
-    100% { transform: translateX(0); }
 }

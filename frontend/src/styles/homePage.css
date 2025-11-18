@@ -1,94 +1,104 @@
 .home-container {
+    min-height: 100vh;
+    width: min(1100px, 92vw);
+    margin: 0 auto;
+    padding: 4rem 1rem 6rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2rem;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(to right, #f0f4ff, #d9e4ff);
-    min-height: 100vh;
-    animation: fadeIn 0.8s ease-in-out;
+    gap: 1.5rem;
+    text-align: center;
+    animation: homeFade 0.9s ease both;
 }
 
-h1 {
-    font-size: 3rem;
-    margin-bottom: 2rem;
-    color: #1a1a1a;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-    animation: slideDown 0.8s ease forwards;
+.home-container h1 {
+    font-size: clamp(2.5rem, 4vw, 3.5rem);
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+    color: var(--text);
+    text-shadow: 0 15px 45px rgba(0, 0, 0, 0.45);
 }
 
 .home-card {
-    background: #ffffff;
-    padding: 2rem;
-    margin: 1rem 0;
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    width: 300px;
-    text-align: center;
-    transition: transform 0.3s, box-shadow 0.3s;
-    animation: fadeInUp 0.8s ease forwards;
+    width: min(420px, 92vw);
+    padding: 2.5rem 2rem;
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    background: linear-gradient(140deg, rgba(13, 35, 76, 0.75), rgba(6, 18, 40, 0.95));
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    transform-origin: center;
+    transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s;
 }
 
 .home-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+    transform: translateY(-6px);
+    border-color: rgba(96, 186, 255, 0.7);
+    box-shadow: var(--shadow-strong);
 }
 
 .home-card h2 {
-    margin-bottom: 1rem;
-    color: #333333;
+    font-size: 1.45rem;
+    color: var(--primary-soft);
+    margin: 0;
 }
 
 .home-card input {
-    width: 80%;
-    padding: 0.5rem 0.8rem;
-    margin-bottom: 1rem;
-    border-radius: 8px;
-    border: 1px solid #cccccc;
-    outline: none;
-    font-size: 1rem;
-    transition: border-color 0.3s;
-}
-
-.home-card input:focus {
-    border-color: #4a90e2;
-    box-shadow: 0 0 5px rgba(74,144,226,0.4);
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 0.85rem 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
 }
 
 .home-card button {
-    padding: 0.6rem 1.2rem;
-    border: none;
-    border-radius: 8px;
-    background-color: #4a90e2;
-    color: white;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s, transform 0.2s;
+    padding: 0.85rem 1.4rem;
+    border-radius: 16px;
+    background: linear-gradient(120deg, var(--primary), var(--accent));
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    box-shadow: 0 10px 30px rgba(77, 163, 255, 0.45);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .home-card button:hover {
-    background-color: #357abd;
-    transform: scale(1.05);
+    transform: translateY(-3px);
+    box-shadow: 0 15px 40px rgba(77, 163, 255, 0.55);
 }
 
 .error {
-    color: #e74c3c;
-    margin-top: 1rem;
+    color: var(--danger);
     font-weight: 600;
-    animation: fadeIn 0.5s ease;
+    padding: 0.85rem 1.2rem;
+    background: rgba(255, 107, 138, 0.12);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 107, 138, 0.35);
+    backdrop-filter: blur(12px);
+    animation: pulseError 1.2s ease infinite alternate;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+@keyframes homeFade {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideDown {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
+@keyframes pulseError {
+    from {
+        box-shadow: 0 0 0 rgba(255, 107, 138, 0.15);
+    }
+    to {
+        box-shadow: 0 0 25px rgba(255, 107, 138, 0.35);
+    }
 }

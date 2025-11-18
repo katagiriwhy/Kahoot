@@ -48,41 +48,49 @@ export function FinalPage() {
     const top3 = sortedPlayers.slice(0, 3);
 
     return (
-        <div>
-            <h2>Final Results</h2>
-            
-            <div>
-                <h3>Top 3 Players:</h3>
+        <div className="final-container glass-card">
+            <header className="final-header">
+                <p>Game concluded</p>
+                <h2>Final Results</h2>
+            </header>
+
+            <section className="section-block">
+                <h3>Top 3 Players</h3>
                 {top3.length > 0 ? (
-                    <ol>
+                    <ol className="top-list">
                         {top3.map((player, index) => (
                             <li key={player.user_id}>
-                                {index === 0 && "🥇 "}
-                                {index === 1 && "🥈 "}
-                                {index === 2 && "🥉 "}
-                                {player.nickname}: {player.score} point{player.score !== 1 ? 's' : ''}
+                                <span className={`medal medal-${index + 1}`}>#{index + 1}</span>
+                                <div className="player-meta">
+                                    <p>{player.nickname}</p>
+                                    <small>{player.score} pts</small>
+                                </div>
                             </li>
                         ))}
                     </ol>
                 ) : (
-                    <p>No results available</p>
+                    <p className="empty">No results available</p>
                 )}
-            </div>
+            </section>
 
             {sortedPlayers.length > 3 && (
-                <div>
-                    <h3>All Players:</h3>
-                    <ul>
-                        {sortedPlayers.map((player) => (
+                <section className="section-block">
+                    <h3>All Players</h3>
+                    <ul className="all-list">
+                        {sortedPlayers.map((player, index) => (
                             <li key={player.user_id}>
-                                {player.nickname}: {player.score} point{player.score !== 1 ? 's' : ''}
+                                <span>{index + 1}.</span>
+                                <p>{player.nickname}</p>
+                                <strong>{player.score} pts</strong>
                             </li>
                         ))}
                     </ul>
-                </div>
+                </section>
             )}
 
-            <button onClick={exit}>Return to Home</button>
+            <button className="exit-btn" onClick={exit}>
+                Return to Home
+            </button>
         </div>
     );
 }
