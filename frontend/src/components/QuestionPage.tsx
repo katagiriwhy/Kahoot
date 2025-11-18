@@ -49,7 +49,7 @@ export function QuestionPage() {
                 setSelected(null);
                 setAnswerSent(false);
                 setNavigated(false);
-                navigatedToInterimRef.current = false; // Reset when new question arrives
+                navigatedToInterimRef.current = false;
                 navigatedToFinalRef.current = false;
             }
             if (msg.type === "question_end" && !navigatedToInterimRef.current) {
