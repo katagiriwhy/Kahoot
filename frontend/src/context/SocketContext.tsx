@@ -35,9 +35,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const lastGameResults = useRef<any | null>(null);
     const [, setConnected] = useState(false);
 
-    // helper: dispatch to handlers
     const dispatch = useCallback((data: any) => {
-        // cache updates so new subscribers can be hydrated
+
         if (data?.type === "lobby_update") lastLobbyUpdate.current = data;
         if (data?.type === "question") lastQuestion.current = data;
         if (data?.type === "question_end") lastQuestionEnd.current = data;
@@ -49,7 +48,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         });
     }, []);
 
-    // Create WS for a particular session. If already connected to the same session -> noop.
     const connectToSession = useCallback((sessionId: number) => {
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
             console.log("[WS] Already connected");
@@ -76,12 +74,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         ws.onmessage = (event) => {
             console.log("[WS] MESSAGE:", event.data);
             try {
-                // Try to parse as single JSON object first
                 const data = JSON.parse(event.data);
                 dispatch(data);
             } catch (e) {
-                // If parsing fails, try to split by } and parse each part
-                // This handles cases where multiple JSON objects might be concatenated
+
                 const text = event.data.toString();
                 let start = 0;
                 let depth = 0;
@@ -120,12 +116,11 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         wsRef.current = ws;
     }, [dispatch]);
 
-    // Leave current session: inform server and close socket
     const leaveSession = useCallback(() => {
         if (!wsRef.current) return;
         const sid = sessionIdRef.current;
         try {
-            // send leave message so server can remove from session_players (server handles leave)
+
             wsRef.current.send(JSON.stringify({ type: "leave", session_id: sid }));
         } catch (e) {
             console.warn("send leave failed", e);
@@ -134,7 +129,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         wsRef.current = null;
         sessionIdRef.current = null;
         setConnected(false);
-        // optionally clear cached lobby/question/question_end update:
+
         lastLobbyUpdate.current = null;
         lastQuestion.current = null;
         lastQuestionEnd.current = null;
