@@ -16,9 +16,12 @@ function TempHome () {
             <Link to={`/newquiz`}>
                 <p>NEW QUIZ </p>
             </Link>
-            <h3>Under development: </h3>
             <Link to={`/home`}>
                 <p>HOME </p>
+            </Link>
+            <h3>Under development: </h3>
+            <Link to={`/quiz`}>
+                <p>QUIZ </p>
             </Link>
         </>
     )
