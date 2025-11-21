@@ -1,20 +1,14 @@
 import type { FormEvent } from "react";
+import { useState } from "react";
 
-interface UserAnswers {
-    answers: boolean[];
-}
+import type { UserAnswers, QuizData } from '../components/Quiz'
 
-interface Question {
-    variants: string[];
-    correct: number;
-}
-
-interface QuizData {
-    id: number;
-    questions: Question[];
-}
+import axios from '../components/Api';
+import { SEND_ANSWER_URL } from '../components/Api';
 
 function Quiz() {
+
+    const [loading, setLoading] = useState(false);
 
     const quizData: QuizData = {
         id: 1,
@@ -36,6 +30,9 @@ function Quiz() {
 
     const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+
+        setLoading(true);
+
         const formData = new FormData(e.currentTarget);
         const userAnswers: boolean[] = [];
 
@@ -45,7 +42,21 @@ function Quiz() {
             userAnswers.push(selectedIndex === question.correct);
         })
         console.log("Результаты проверки:", userAnswers);
-        console.log("Form sent");
+        const userAnswersData: UserAnswers = {
+            answers: userAnswers
+        };
+        axios.post(SEND_ANSWER_URL, {
+            userAnswersData
+        })
+            .then(function (response) {
+                console.log(response);
+            })
+            .catch(function (error) {
+                console.log(error);
+            })
+            .finally(function () {
+                setLoading(false);
+            });
     }
 
     return (
@@ -71,11 +82,9 @@ function Quiz() {
                             ))}
                         </div>
                     </div>
-                    
+
                 ))}
-                <button type="submit" className="sendAnswer">
-                    Отправить ответы
-                </button>
+                <button type="submit" className="sendAnswer" disabled={loading}>{loading ? "Loading..." : "Submit"}</button>
             </form>
         </>
     )
