@@ -71,15 +71,19 @@ function NewQuiz() {
                 {questions.map((item, index) => (
                     <div key={index} className="questionItem">
                         <input type="text" placeholder={`Question ${index + 1}`} value={item.question} onChange={(e) => handleQuestionChange(index, e.target.value)} required />
+                        
                         <button type="button" onClick={() => addVariant(index)}>Add variant</button>
                         {questions[index].variants.length > 1 && <button type="button" onClick={() => removeVariant(index)}>Remove variant</button>}
+
                         <Variant variants={item.variants} onVariantChange={(variantIndex, value) => handleVariantChange(index, variantIndex, value)} />
+
                         <label htmlFor="correctVar">Correct Variant:</label>
                         <select id="correctVar" value={item.correctVariant} onChange={(e) => handleCorrectnessChange(index, Number(e.target.value))}>
                             {item.variants.map((_, index) => (
                                 <option key={index} value={index}>Variant {index + 1}</option>
                             ))}
                         </select>
+
                         {questions.length > 1 && (<button type="button" onClick={() => removeQuestion(index)}>Delete</button>)}
                     </div>
                 ))}
