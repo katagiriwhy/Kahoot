@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-function TempHome () {
+function TempHome() {
 
     return (
         <>
@@ -19,10 +19,10 @@ function TempHome () {
             <Link to={`/home`}>
                 <p>HOME </p>
             </Link>
-            <h3>Under development: </h3>
-            <Link to={`/quiz`}>
+            <Link to={`/quiz/1`}>
                 <p>QUIZ </p>
             </Link>
+            <h3>Under development: </h3>
         </>
     )
 }

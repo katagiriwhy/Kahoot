@@ -12,7 +12,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/newquiz" element={<NewQuiz />} />
-          <Route path="/quiz" element={<QuizPage />} />
+          <Route path="/quiz/:sessionID" element={<QuizPage />} />
         </Routes>
       </Router>
     </>
