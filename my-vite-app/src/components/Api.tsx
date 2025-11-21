@@ -5,7 +5,8 @@ export const NEW_QUIZ_URL = '/new_quiz';
 export const REGISTER_URL = '/register';
 export const JOIN_URL = '/join';
 export const CREATE_URL = '/create';
-export const SEND_ANSWER_URL = '/answer'
+export const SEND_ANSWER_URL = '/answer';
+export const GET_QUIZ_URL = '/quiz'
 
 const api = axios.create({
   baseURL: 'http://localhost:8080',

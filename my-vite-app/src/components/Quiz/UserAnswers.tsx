@@ -1,5 +1,5 @@
 interface UserAnswers {
-    answers: boolean[];
+    answers: number;
 }
 
 export type { UserAnswers as default };

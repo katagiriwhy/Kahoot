@@ -1,7 +1,6 @@
-import type Question from "./Question";
+import type Question from './Question';
 
 interface QuizData {
-    id: number;
     questions: Question[];
 }
 

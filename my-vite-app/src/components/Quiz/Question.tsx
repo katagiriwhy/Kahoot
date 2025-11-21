@@ -1,6 +1,7 @@
 interface Question {
+    question: string;
+    correctVariant: number;
     variants: string[];
-    correct: number;
 }
 
 export type { Question as default };

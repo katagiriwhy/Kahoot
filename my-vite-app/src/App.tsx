@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Home, Login, Register, NewQuiz, TempHome, Quiz } from './pages';
+import { Home, Login, Register, NewQuiz, TempHome, QuizPage } from './pages';
 
 function App() {
 
@@ -12,7 +12,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/newquiz" element={<NewQuiz />} />
-          <Route path="/quiz" element={<Quiz />} />
+          <Route path="/quiz" element={<QuizPage />} />
         </Routes>
       </Router>
     </>
