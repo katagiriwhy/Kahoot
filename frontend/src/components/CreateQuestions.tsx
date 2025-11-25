@@ -11,7 +11,7 @@ const CreateQuestions = () => {
         { answer_text: "", is_correct: false },
         { answer_text: "", is_correct: false },
     ]);
-    const [imageFile, setImageFile] = useState<File | null>(null); // новое поле
+    const [imageFile, setImageFile] = useState<File | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 

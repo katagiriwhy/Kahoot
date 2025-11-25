@@ -136,7 +136,7 @@ export function InterimPage() {
                                     <span className="rank">{index + 1}</span>
                                     <div className="score-player">
                                         <p>{player.nickname}</p>
-                                        <small>{player.score} pts</small>
+                                        <small>{player.score} points</small>
                                     </div>
                                 </li>
                             ))}
