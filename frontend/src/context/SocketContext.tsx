@@ -59,7 +59,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
         const token = localStorage.getItem("token");
         const ws = new WebSocket(
-            `ws://172.20.10.3:8080/ws/game-sessions/join?token=${token}`
+            `ws://localhost:8080/ws/game-sessions/join?token=${token}`
         );
 
         ws.onopen = () => {
