@@ -33,8 +33,6 @@ func getSecretKey() []byte {
 	return key
 }
 
-// OverrideSecretKeyForTests allows unit tests to inject a deterministic secret.
-// It should not be used by application code outside of tests.
 func OverrideSecretKeyForTests(key []byte) {
 	secretMu.Lock()
 	defer secretMu.Unlock()
