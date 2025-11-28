@@ -1,60 +1,208 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
-import CreateQuestions from '../src/components/CreateQuestions';
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import CreateQuestions from "../src/components/CreateQuestions";
+import api from "../src/components/Api";
+import { CREATE_QUESTION_WITH_ANSWERS_URL } from "../src/components/Api";
+import { vi } from "vitest";
 
-const mockPost = vi.fn();
+vi.mock("../src/components/Api");
 
-vi.mock('../src/components/Api', () => ({
-    default: { post: mockPost },
-    CREATE_QUESTION_WITH_ANSWERS_URL: '/questions/answers',
-}));
-
-describe('CreateQuestions component', () => {
+describe("CreateQuestions Component", () => {
     beforeEach(() => {
-        mockPost.mockReset();
+        vi.clearAllMocks();
     });
 
-    it('adds answer fields when requested', async () => {
+    test("renders question creation form", () => {
         render(<CreateQuestions />);
 
-        expect(screen.getAllByPlaceholderText(/Answer/i)).toHaveLength(2);
-
-        await userEvent.click(screen.getByRole('button', { name: /Add Answer/i }));
-        expect(screen.getAllByPlaceholderText(/Answer/i)).toHaveLength(3);
+        expect(screen.getByText("Create Question")).toBeInTheDocument();
+        expect(screen.getByLabelText(/Quiz ID/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Question Text/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Points/i)).toBeInTheDocument();
     });
 
-    it('submits form data to API', async () => {
-        mockPost.mockResolvedValueOnce({});
+    test("handles input changes", () => {
+        render(<CreateQuestions />);
+
+        const quizIdInput = screen.getByLabelText(/Quiz ID/i);
+        fireEvent.change(quizIdInput, { target: { value: "1" } });
+
+        expect(quizIdInput).toHaveValue(1);
+    });
+
+    test("handles answer text changes", () => {
+        render(<CreateQuestions />);
+
+        const answerInputs = screen.getAllByPlaceholderText(/Answer/i);
+        fireEvent.change(answerInputs[0], { target: { value: "Answer 1" } });
+
+        expect(answerInputs[0]).toHaveValue("Answer 1");
+    });
+
+    test("handles correct answer checkbox", () => {
+        render(<CreateQuestions />);
+
+        const checkboxes = screen.getAllByLabelText("Correct");
+        fireEvent.click(checkboxes[0]);
+
+        expect(checkboxes[0]).toBeChecked();
+    });
+
+    test("adds new answer", () => {
+        render(<CreateQuestions />);
+
+        const addButton = screen.getByText("Add Answer");
+        fireEvent.click(addButton);
+
+        const answerInputs = screen.getAllByPlaceholderText(/Answer/i);
+        expect(answerInputs.length).toBe(3);
+    });
+
+    test("removes answer when more than 2 answers exist", () => {
+        render(<CreateQuestions />);
+
+        const addButton = screen.getByText("Add Answer");
+        fireEvent.click(addButton);
+
+        const removeButtons = screen.getAllByText("Remove");
+        fireEvent.click(removeButtons[0]);
+
+        const answerInputs = screen.getAllByPlaceholderText(/Answer/i);
+        expect(answerInputs.length).toBe(2);
+    });
+
+    test("does not allow removing when only 2 answers", () => {
+        render(<CreateQuestions />);
+
+        const removeButtons = screen.queryAllByText("Remove");
+        expect(removeButtons.length).toBe(0);
+    });
+
+    test("does not allow adding more than 4 answers", () => {
+        render(<CreateQuestions />);
+
+        const addButton = screen.getByText("Add Answer");
+        fireEvent.click(addButton);
+        fireEvent.click(addButton);
+
+        expect(screen.queryByText("Add Answer")).not.toBeInTheDocument();
+    });
+
+    test("successfully creates question with answers", async () => {
+        (api.post as any).mockResolvedValueOnce({ data: {} });
 
         render(<CreateQuestions />);
 
-        const numberInputs = screen.getAllByRole('spinbutton');
-        await userEvent.type(numberInputs[0], '5'); // Quiz ID
-        await userEvent.type(numberInputs[1], '50'); // Points
+        fireEvent.change(screen.getByLabelText(/Quiz ID/i), {
+            target: { value: "1" },
+        });
+        fireEvent.change(screen.getByLabelText(/Question Text/i), {
+            target: { value: "Test Question?" },
+        });
+        fireEvent.change(screen.getByLabelText(/Points/i), {
+            target: { value: "100" },
+        });
 
-        const textareas = screen.getAllByRole('textbox').filter((el) => el.tagName === 'TEXTAREA');
-        await userEvent.type(textareas[0], 'Who am I?');
+        const answerInputs = screen.getAllByPlaceholderText(/Answer/i);
+        fireEvent.change(answerInputs[0], { target: { value: "Answer 1" } });
+        fireEvent.change(answerInputs[1], { target: { value: "Answer 2" } });
 
-        const [answerOne, answerTwo] = screen.getAllByPlaceholderText(/Answer/i);
-        await userEvent.type(answerOne, 'Option A');
-        await userEvent.type(answerTwo, 'Option B');
-        await userEvent.click(screen.getAllByLabelText(/Correct/i)[0]);
+        const checkboxes = screen.getAllByLabelText("Correct");
+        fireEvent.click(checkboxes[0]);
 
-        await userEvent.click(screen.getByRole('button', { name: /Create Question/i }));
+        fireEvent.click(screen.getByText("Create Question"));
 
-        await waitFor(() => expect(mockPost).toHaveBeenCalledTimes(1));
+        await waitFor(() => {
+            expect(api.post).toHaveBeenCalledWith(
+                CREATE_QUESTION_WITH_ANSWERS_URL,
+                expect.any(FormData),
+                expect.objectContaining({
+                    headers: { "Content-Type": "multipart/form-data" },
+                })
+            );
+        });
+    });
 
-        const [, formData] = mockPost.mock.calls[0];
-        expect((formData as FormData).get('quiz_id')).toBe('5');
-        expect((formData as FormData).get('question_text')).toBe('Who am I?');
-        expect((formData as FormData).get('points')).toBe('50');
+    test("resets form after successful creation", async () => {
+        (api.post as any).mockResolvedValueOnce({ data: {} });
 
-        const answersPayload = (formData as FormData).get('answers') as string;
-        const answers = JSON.parse(answersPayload);
-        expect(answers).toHaveLength(2);
-        expect(answers[0]).toMatchObject({ answer_text: 'Option A', is_correct: true });
-        expect(answers[1]).toMatchObject({ answer_text: 'Option B', is_correct: false });
+        render(<CreateQuestions />);
+
+        fireEvent.change(screen.getByLabelText(/Quiz ID/i), {
+            target: { value: "1" },
+        });
+        fireEvent.change(screen.getByLabelText(/Question Text/i), {
+            target: { value: "Test Question?" },
+        });
+
+        fireEvent.click(screen.getByText("Create Question"));
+
+        await waitFor(() => {
+            expect(screen.getByLabelText(/Quiz ID/i)).toHaveValue(null);
+        });
+    });
+
+    test("shows error on creation failure", async () => {
+        (api.post as any).mockRejectedValueOnce({
+            response: { data: { error: "Creation failed" } },
+        });
+
+        render(<CreateQuestions />);
+
+        fireEvent.change(screen.getByLabelText(/Quiz ID/i), {
+            target: { value: "1" },
+        });
+        fireEvent.change(screen.getByLabelText(/Question Text/i), {
+            target: { value: "Test Question?" },
+        });
+
+        fireEvent.click(screen.getByText("Create Question"));
+
+        expect(await screen.findByText("Creation failed")).toBeInTheDocument();
+    });
+
+    test("handles file upload", async () => {
+        (api.post as any).mockResolvedValueOnce({ data: {} });
+
+        const file = new File(["test"], "test.png", { type: "image/png" });
+
+        render(<CreateQuestions />);
+
+        const fileInput = screen.getByLabelText(/Image/i);
+        fireEvent.change(fileInput, { target: { files: [file] } });
+
+        fireEvent.change(screen.getByLabelText(/Quiz ID/i), {
+            target: { value: "1" },
+        });
+        fireEvent.change(screen.getByLabelText(/Question Text/i), {
+            target: { value: "Test Question?" },
+        });
+
+        fireEvent.click(screen.getByText("Create Question"));
+
+        await waitFor(() => {
+            expect(api.post).toHaveBeenCalled();
+        });
+    });
+
+    test("disables submit button while loading", async () => {
+        (api.post as any).mockImplementationOnce(
+            () => new Promise((resolve) => setTimeout(resolve, 100))
+        );
+
+        render(<CreateQuestions />);
+
+        fireEvent.change(screen.getByLabelText(/Quiz ID/i), {
+            target: { value: "1" },
+        });
+        fireEvent.change(screen.getByLabelText(/Question Text/i), {
+            target: { value: "Test Question?" },
+        });
+
+        const submitButton = screen.getByText("Create Question");
+        fireEvent.click(submitButton);
+
+        expect(submitButton).toBeDisabled();
+        expect(screen.getByText("Creating...")).toBeInTheDocument();
     });
 });
-

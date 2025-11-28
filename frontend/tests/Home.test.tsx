@@ -1,69 +1,126 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
-import Home from '../src/components/Home';
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import Home from "../src/components/Home";
+import axios from "../src/components/Api";
+import { CREATE_LOBBY_URL } from "../src/components/Api";
+import { vi } from "vitest";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-const mockPost = vi.fn();
-const mockGet = vi.fn();
-
-vi.mock('../src/components/Api', () => ({
-    default: {
-        post: mockPost,
-        get: mockGet,
-    },
-    CREATE_LOBBY_URL: '/game-sessions',
-}));
+vi.mock("../components/Api");
 
 const mockNavigate = vi.fn();
 
-vi.mock('react-router-dom', async () => {
-    const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+vi.mock("react-router-dom", () => {
+    const actual = vi.importActual("react-router-dom");
     return {
         ...actual,
         useNavigate: () => mockNavigate,
     };
 });
 
-describe('Home component', () => {
+function renderWithRouter(ui: React.ReactNode) {
+    return render(
+        <MemoryRouter initialEntries={["/"]}>
+            <Routes>
+                <Route path="/" element={ui} />
+                <Route path="/lobby/:id" element={<div>Lobby Page</div>} />
+            </Routes>
+        </MemoryRouter>
+    );
+}
+
+describe("Home Component", () => {
     beforeEach(() => {
-        mockPost.mockReset();
-        mockGet.mockReset();
-        mockNavigate.mockReset();
+        vi.clearAllMocks();
     });
 
-    it('renders create and join lobby cards', () => {
-        render(<Home />);
+    test("creates lobby and navigates", async () => {
+        (axios.post as any).mockResolvedValueOnce({
+            data: { game_session_id: 123 },
+        });
 
-        expect(screen.getByText(/Create Lobby/i)).toBeInTheDocument();
-        expect(screen.getByText(/Join Lobby/i)).toBeInTheDocument();
-    });
+        renderWithRouter(<Home />);
 
-    it('creates lobby and navigates host to lobby page', async () => {
-        mockPost.mockResolvedValueOnce({ data: { game_session_id: 555 } });
+        fireEvent.change(screen.getByPlaceholderText("Quiz ID"), {
+            target: { value: "10" },
+        });
 
-        render(<Home />);
-
-        await userEvent.type(screen.getByPlaceholderText(/Quiz ID/i), '42');
-        await userEvent.click(screen.getByText(/Create Lobby/i, { selector: 'button' }));
+        fireEvent.click(screen.getByText(/Create Lobby/i));
 
         await waitFor(() => {
-            expect(mockPost).toHaveBeenCalledWith('/game-sessions', { quiz_id: 42 });
+            expect(axios.post).toHaveBeenCalledWith(CREATE_LOBBY_URL, { quiz_id: 10 });
         });
-        expect(mockNavigate).toHaveBeenCalledWith('/lobby/555', { state: { isHost: true } });
+
+        expect(mockNavigate).toHaveBeenCalledWith("/lobby/123", {
+            state: { isHost: true },
+        });
     });
 
-    it('joins existing lobby as player', async () => {
-        mockGet.mockResolvedValueOnce({ data: { exists: true } });
+    test("shows error when create lobby fails", async () => {
+        (axios.post as any).mockRejectedValueOnce({
+            response: { data: { error: "Failed" } },
+        });
 
-        render(<Home />);
+        renderWithRouter(<Home />);
 
-        await userEvent.type(screen.getByPlaceholderText(/Lobby ID/i), '777');
-        await userEvent.click(screen.getByText(/Join Lobby/i, { selector: 'button' }));
+        fireEvent.change(screen.getByPlaceholderText("Quiz ID"), {
+            target: { value: "5" },
+        });
+
+        fireEvent.click(screen.getByText(/Create Lobby/i));
+
+        expect(await screen.findByText("Failed")).toBeInTheDocument();
+    });
+
+    test("joins existing lobby", async () => {
+        (axios.get as any).mockResolvedValueOnce({
+            data: { exists: true },
+        });
+
+        renderWithRouter(<Home />);
+
+        fireEvent.change(screen.getByPlaceholderText("Lobby ID"), {
+            target: { value: "77" },
+        });
+
+        fireEvent.click(screen.getByText(/Join Lobby/i));
 
         await waitFor(() => {
-            expect(mockGet).toHaveBeenCalledWith('/game-sessions/777/exists');
+            expect(axios.get).toHaveBeenCalledWith("/game-sessions/77/exists");
         });
-        expect(mockNavigate).toHaveBeenCalledWith('/lobby/777', { state: { isHost: false } });
+
+        expect(mockNavigate).toHaveBeenCalledWith("/lobby/77", {
+            state: { isHost: false },
+        });
+    });
+
+    test("shows error when lobby does not exist", async () => {
+        (axios.get as any).mockResolvedValueOnce({
+            data: { exists: false },
+        });
+
+        renderWithRouter(<Home />);
+
+        fireEvent.change(screen.getByPlaceholderText("Lobby ID"), {
+            target: { value: "99" },
+        });
+
+        fireEvent.click(screen.getByText(/Join Lobby/i));
+
+        expect(await screen.findByText("Лобби с ID:99 не существует!")).toBeInTheDocument();
+    });
+
+    test("shows error when join lobby request fails", async () => {
+        (axios.get as any).mockRejectedValueOnce("Network error");
+
+        renderWithRouter(<Home />);
+
+        fireEvent.change(screen.getByPlaceholderText("Lobby ID"), {
+            target: { value: "12" },
+        });
+
+        fireEvent.click(screen.getByText(/Join Lobby/i));
+
+        expect(await screen.findByText("Network error")).toBeInTheDocument();
     });
 });
-
