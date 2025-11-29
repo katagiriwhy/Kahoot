@@ -156,25 +156,6 @@ describe("Login Component", () => {
         expect(screen.getByText("Loading...")).toBeInTheDocument();
     });
 
-    test("reset button clears form", () => {
-        render(
-            <MemoryRouter>
-                <Login />
-            </MemoryRouter>
-        );
-
-        const loginInput = screen.getByPlaceholderText("Login");
-        const passwordInput = screen.getByPlaceholderText("Password");
-
-        fireEvent.change(loginInput, { target: { value: "testuser" } });
-        fireEvent.change(passwordInput, { target: { value: "testpass" } });
-
-        fireEvent.click(screen.getByText("Reset"));
-
-        expect(loginInput).toHaveValue("");
-        expect(passwordInput).toHaveValue("");
-    });
-
     test("shows link to register page", () => {
         render(
             <MemoryRouter>

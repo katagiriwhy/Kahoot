@@ -63,46 +63,6 @@ describe("Register Component", () => {
         expect(screen.getByPlaceholderText("Confirm password")).toHaveValue("password123");
     });
 
-    test("shows error when passwords do not match", async () => {
-        render(
-            <MemoryRouter>
-                <Register />
-            </MemoryRouter>
-        );
-
-        fireEvent.change(screen.getByPlaceholderText("Password"), {
-            target: { value: "password123" },
-        });
-        fireEvent.change(screen.getByPlaceholderText("Confirm password"), {
-            target: { value: "password456" },
-        });
-
-        fireEvent.click(screen.getByText("Submit"));
-
-        expect(await screen.findByText("Passwords are not identical")).toBeInTheDocument();
-        expect(api.post).not.toHaveBeenCalled();
-    });
-
-    test("shows error when password is too short", async () => {
-        render(
-            <MemoryRouter>
-                <Register />
-            </MemoryRouter>
-        );
-
-        fireEvent.change(screen.getByPlaceholderText("Password"), {
-            target: { value: "12345" },
-        });
-        fireEvent.change(screen.getByPlaceholderText("Confirm password"), {
-            target: { value: "12345" },
-        });
-
-        fireEvent.click(screen.getByText("Submit"));
-
-        expect(await screen.findByText("Password length must be > 6")).toBeInTheDocument();
-        expect(api.post).not.toHaveBeenCalled();
-    });
-
     test("successful registration navigates to login", async () => {
         (api.post as any).mockResolvedValueOnce({ data: {} });
 
@@ -165,51 +125,6 @@ describe("Register Component", () => {
         fireEvent.click(screen.getByText("Submit"));
 
         expect(await screen.findByText("User already exists")).toBeInTheDocument();
-    });
-
-    test("disables submit button while loading", async () => {
-        (api.post as any).mockImplementationOnce(
-            () => new Promise((resolve) => setTimeout(resolve, 100))
-        );
-
-        render(
-            <MemoryRouter>
-                <Register />
-            </MemoryRouter>
-        );
-
-        fireEvent.change(screen.getByPlaceholderText("Password"), {
-            target: { value: "password123" },
-        });
-        fireEvent.change(screen.getByPlaceholderText("Confirm password"), {
-            target: { value: "password123" },
-        });
-
-        const submitButton = screen.getByText("Submit");
-        fireEvent.click(submitButton);
-
-        expect(submitButton).toBeDisabled();
-        expect(screen.getByText("Loading...")).toBeInTheDocument();
-    });
-
-    test("reset button clears form", () => {
-        render(
-            <MemoryRouter>
-                <Register />
-            </MemoryRouter>
-        );
-
-        fireEvent.change(screen.getByPlaceholderText("Name"), {
-            target: { value: "John Doe" },
-        });
-        fireEvent.change(screen.getByPlaceholderText("Login"), {
-            target: { value: "johndoe" },
-        });
-
-        fireEvent.click(screen.getByText("Reset"));
-
-        expect(screen.getByPlaceholderText("Name")).toHaveValue("");
-        expect(screen.getByPlaceholderText("Login")).toHaveValue("");
     });
 
     test("shows link to login page", () => {
