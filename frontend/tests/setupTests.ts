@@ -11,10 +11,24 @@ if (!('ResizeObserver' in globalThis)) {
     (globalThis as any).ResizeObserver = MockResizeObserver;
 }
 
+// Extend the Window interface to include matchMedia
+interface Window {
+    matchMedia: (query: string) => {
+        matches: boolean;
+        media: string;
+        onchange: any;
+        addListener: (listener: (event: MediaQueryListEvent) => void) => void;
+        removeListener: (listener: (event: MediaQueryListEvent) => void) => void;
+        addEventListener: (type: string, listener: EventListener) => void;
+        removeEventListener: (type: string, listener: EventListener) => void;
+        dispatchEvent: (event: Event) => boolean;
+    };
+}
+
 if (!('matchMedia' in window)) {
-    window.matchMedia = () => ({
+    window.matchMedia = (query: string) => ({
         matches: false,
-        media: '',
+        media: query,
         onchange: null,
         addListener: () => {},
         removeListener: () => {},
@@ -23,4 +37,3 @@ if (!('matchMedia' in window)) {
         dispatchEvent: () => false,
     });
 }
-
