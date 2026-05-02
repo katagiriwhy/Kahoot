@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { publicBackendOrigin } from '../config/publicBackend';
 
 export const REGISTER_URL = "/users/register";
 export const LOGIN_URL = "/users/login";
@@ -7,7 +8,7 @@ export const CREATE_LOBBY_URL = '/game-sessions';
 export const CREATE_QUESTION_WITH_ANSWERS_URL = '/questions/answers';
 
 const api = axios.create({
-    baseURL: "http://localhost:8080",
+    baseURL: publicBackendOrigin,
 });
 
 api.interceptors.request.use((config) => {

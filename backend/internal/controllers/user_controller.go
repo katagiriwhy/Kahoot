@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"backend/backend/internal/utils"
+	"backend/internal/config"
 	"fmt"
 	"net/http"
 
@@ -118,8 +119,8 @@ func (con *UserController) Login(c *gin.Context) {
 		token,
 		3600,
 		"/",
-		"localhost",
-		false,
+		config.SessionCookieDomain(),
+		config.SessionCookieSecure(),
 		true,
 	)
 

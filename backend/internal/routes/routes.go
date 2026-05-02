@@ -3,6 +3,7 @@ package routes
 import (
 	"backend/backend/internal/controllers"
 	"backend/backend/internal/middleware"
+	"backend/internal/config"
 	"log"
 	"net/http"
 
@@ -10,10 +11,11 @@ import (
 )
 
 func corsMiddleware() gin.HandlerFunc {
+	allowed := config.CorsAllowedOrigins()
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 		log.Printf("CORS Origin: %s", origin)
-		if origin != "" {
+		if origin != "" && config.CorsOriginPermitted(origin, allowed) {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			c.Writer.Header().Set(

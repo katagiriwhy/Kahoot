@@ -69,10 +69,17 @@
     <h3>Players:</h3>
     <ul id="players"></ul>
     <div id="lobby-status" class="status"></div>
-</section>
+    </section>
 
+<script src="config/public-host.js"></script>
 <script>
-    const API_BASE = 'http://localhost:8080';
+    const API_BASE = (typeof window.__KAHOOT_PUBLIC_BACKEND__ === 'string' ? window.__KAHOOT_PUBLIC_BACKEND__ : 'http://localhost:8080').replace(/\/$/, '');
+    function wsGameSessionsJoinURL(tok) {
+        const u = new URL(API_BASE);
+        u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
+        const q = tok ? ('?token=' + encodeURIComponent(tok)) : '';
+        return u.origin + '/ws/game-sessions/join' + q;
+    }
     let token = localStorage.getItem('token');
     let ws = null;
     let sessionId = null;
@@ -188,7 +195,7 @@
         document.getElementById('lobby').classList.remove('hidden');
         document.getElementById('leave-btn').disabled = false;
 
-        ws = new WebSocket(`ws://localhost:8080/ws/game-sessions/join`);
+        ws = new WebSocket(wsGameSessionsJoinURL(token));
 
         ws.onopen = () => {
             ws.send(JSON.stringify({ session_id: +sessionId }));

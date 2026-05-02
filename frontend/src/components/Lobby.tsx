@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
+import { publicBackendOrigin } from "../config/publicBackend";
 import "../styles/lobby.css";
 
 type Player = { id: number; nickname: string };
@@ -44,7 +45,7 @@ export default function Lobby() {
 
     const endLobby = async () => {
         const token = localStorage.getItem("token");
-        await fetch(`http://172.20.10.3:8080/game-sessions/${id}/end`, {
+        await fetch(`${publicBackendOrigin}/game-sessions/${id}/end`, {
             method: "DELETE",
             headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
             credentials: "include"

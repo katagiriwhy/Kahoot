@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS public.session_players (
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   nickname VARCHAR(30) NOT NULL,
   joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(session_id, user_id)
+  UNIQUE(session_id, user_id),
+  CONSTRAINT uq_session_players_session_id_row UNIQUE (session_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS public.player_answers (
@@ -66,12 +67,10 @@ CREATE TABLE IF NOT EXISTS public.player_answers (
     selected_answer_id BIGINT NOT NULL REFERENCES answers(id) ON DELETE CASCADE,
     is_correct BOOLEAN,
     answered_at TIMESTAMP,
-    CONSTRAINT fk_player_answers_session_check
-    CHECK (
-              session_id = (
-              SELECT session_id FROM session_players WHERE id = session_player_id
-                           )
-    )
+    CONSTRAINT fk_player_answers_session_player_matches_session
+        FOREIGN KEY (session_id, session_player_id)
+        REFERENCES session_players (session_id, id)
+        ON DELETE CASCADE
 );
 
 -- CREATE TABLE player_results (
@@ -83,21 +82,25 @@ CREATE TABLE IF NOT EXISTS public.player_answers (
 --
 -- CREATE INDEX idx_player_results_session_player ON player_results(session_player_id);
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_questions_quiz_id ON questions(quiz_id);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_answers_question_id ON answers(question_id);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_game_sessions_quiz_id ON game_sessions(quiz_id);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_game_sessions_host_id ON game_sessions(host_id);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_session_players_session_id ON session_players(session_id);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_session_players_user_id ON session_players(user_id);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_player_answers_session_player ON player_answers(session_player_id);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_player_answers_question ON player_answers(question_id);
-
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_quizzes_creator_id ON quizzes(creator_id);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_quizzes_is_public_created_at ON quizzes(is_public, created_at DESC);
-
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_answers_question_id_correct
+CREATE INDEX IF NOT EXISTS idx_questions_quiz_id ON questions(quiz_id);
+CREATE INDEX IF NOT EXISTS idx_answers_question_id ON answers(question_id);
+CREATE INDEX IF NOT EXISTS idx_answers_question_id_correct
     ON answers(question_id)
     WHERE is_correct = true;
+CREATE INDEX IF NOT EXISTS idx_game_sessions_quiz_id ON game_sessions(quiz_id);
+CREATE INDEX IF NOT EXISTS idx_game_sessions_host_id ON game_sessions(host_id);
+CREATE INDEX IF NOT EXISTS idx_session_players_session_id ON session_players(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_players_user_id ON session_players(user_id);
+CREATE INDEX IF NOT EXISTS idx_player_answers_session_id_player
+    ON player_answers(session_id, session_player_id);
+CREATE INDEX IF NOT EXISTS idx_player_answers_session_player
+    ON player_answers(session_player_id);
+CREATE INDEX IF NOT EXISTS idx_player_answers_question
+    ON player_answers(question_id);
+CREATE INDEX IF NOT EXISTS idx_quizzes_creator_id ON quizzes(creator_id);
+CREATE INDEX IF NOT EXISTS idx_quizzes_is_public_created_at
+    ON quizzes(is_public, created_at DESC);
+
 
 
 

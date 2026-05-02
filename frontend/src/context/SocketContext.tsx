@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useRef, useCallback, useState } from "react";
+import { wsGameSessionsJoinURL } from "../config/publicBackend";
 
 type WSMessageHandler = (data: any) => void;
 
@@ -58,9 +59,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         sessionIdRef.current = sessionId;
 
         const token = localStorage.getItem("token");
-        const ws = new WebSocket(
-            `ws://localhost:8080/ws/game-sessions/join?token=${token}`
-        );
+        const ws = new WebSocket(wsGameSessionsJoinURL(token));
 
         ws.onopen = () => {
             console.log("[WS] OPEN");
