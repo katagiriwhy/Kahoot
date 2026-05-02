@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Kahoot Lobby</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background: #f9fbfd; color: #333; }
+        section { margin-bottom: 25px; padding: 18px; border-radius: 10px; background: white; box-shadow: 0 3px 8px rgba(0,0,0,0.08); }
+        h1 { color: #5a67d8; text-align: center; }
+        h2 { margin-top: 0; color: #4c51bf; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+        input { padding: 12px; margin: 8px 0; width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 15px; }
+        button { padding: 12px 18px; margin: 8px 4px 8px 0; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 15px; }
+        button.primary { background: #5a67d8; color: white; }
+        button.primary:hover { background: #4c51bf; }
+        button.danger { background: #e53e3e; color: white; }
+        button.danger:hover { background: #c53030; }
+        button:disabled { background: #a0aec0; cursor: not-allowed; }
+        .status { margin-top: 12px; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 14px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #e2e3e5; color: #383d41; }
+        #players { list-style: none; padding: 0; margin: 12px 0; }
+        #players li { background: #edf2f7; margin: 6px 0; padding: 12px; border-radius: 6px; font-weight: 500; }
+        .session-id { font-weight: bold; color: #5a67d8; font-size: 1.4em; }
+        .hidden { display: none; }
+        .center { text-align: center; }
+    </style>
+</head>
+<body>
+
+<h1>Kahoot Lobby</h1>
+
+<!-- Auth -->
+<section id="auth">
+    <h2>1. Login / Register</h2>
+    <input id="username" placeholder="Username (e.g. Alice)" />
+    <input id="login" placeholder="Login (e.g. alice123)" />
+    <input id="password" type="password" placeholder="Password" />
+    <div class="center">
+        <button class="primary" onclick="register()">Register</button>
+        <button class="primary" onclick="login()">Login</button>
+    </div>
+    <div id="auth-status" class="status"></div>
+</section>
+
+<!-- Create Session -->
+<section id="create" class="hidden">
+    <h2>2. Create Game Session</h2>
+    <div class="center">
+        <button class="primary" onclick="createSession()">Create Session</button>
+    </div>
+    <div id="create-status" class="status"></div>
+    <div id="session-display" class="hidden center">
+        <p><strong>Session Created!</strong></p>
+        <p>Your Session ID: <span id="created-session-id" class="session-id"></span></p>
+        <p>Share this ID with players.</p>
+    </div>
+</section>
+
+<!-- Join Lobby -->
+<section id="lobby" class="hidden">
+    <h2>3. Join Lobby</h2>
+    <input id="session-input" placeholder="Enter Session ID" />
+    <div class="center">
+        <button class="primary" onclick="joinLobbyFromInput()">Join Session</button>
+        <button class="danger" onclick="leaveLobby()" id="leave-btn" disabled>Leave</button>
+    </div>
+    <p><strong>Connected to Session ID:</strong> <span id="current-session-id"></span></p>
+    <h3>Players:</h3>
+    <ul id="players"></ul>
+    <div id="lobby-status" class="status"></div>
+</section>
+
+<script>
+    const API_BASE = 'http://localhost:8080';
+    let token = localStorage.getItem('token');
+    let ws = null;
+    let sessionId = null;
+
+    // === УТИЛИТЫ ===
+    function showStatus(id, msg, type = 'info') {
+        const el = document.getElementById(id);
+        el.textContent = msg;
+        el.className = `status ${type}`;
+    }
+
+    function showError(id, msg) {
+        showStatus(id, msg, 'error');
+    }
+
+    function showSuccess(id, msg) {
+        showStatus(id, msg, 'success');
+    }
+
+    // === АУТЕНТИФИКАЦИЯ ===
+    async function register() {
+        const body = {
+            username: document.getElementById('username').value.trim(),
+            login: document.getElementById('login').value.trim(),
+            password: document.getElementById('password').value
+        };
+        if (!body.username || !body.login || !body.password) {
+            showError('auth-status', 'All fields required');
+            return;
+        }
+
+        const res = await fetch(`${API_BASE}/users/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        showStatus('auth-status', res.ok ? 'Registered! Login now.' : data.error || JSON.stringify(data), res.ok ? 'success' : 'error');
+    }
+
+    async function login() {
+        const body = {
+            login: document.getElementById('login').value.trim(),
+            password: document.getElementById('password').value
+        };
+        if (!body.login || !body.password) {
+            showError('auth-status', 'Login and password required');
+            return;
+        }
+
+        const res = await fetch(`${API_BASE}/users/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (data.token) {
+            token = data.token;
+            localStorage.setItem('token', token);
+            showSuccess('auth-status', 'Logged in!');
+            document.getElementById('create').classList.remove('hidden');
+        } else {
+            showError('auth-status', data.error || 'Login failed');
+        }
+    }
+
+    // === СОЗДАНИЕ СЕССИИ (без quiz_id) ===
+    async function createSession() {
+        if (!token) {
+            showError('create-status', 'Login required');
+            return;
+        }
+
+        const res = await fetch(`${API_BASE}/ws/game-sessions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ quiz_id: 1 }) // Можно захардкодить или взять из БД
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.game_session_id) {
+            const createdId = data.game_session_id;
+            document.getElementById('created-session-id').textContent = createdId;
+            document.getElementById('session-display').classList.remove('hidden');
+            showSuccess('create-status', `Session created! ID: ${createdId}`);
+        } else {
+            showError('create-status', data.error || 'Failed to create session');
+        }
+    }
+
+    // === ПОДКЛЮЧЕНИЕ К ЛОББИ ===
+    function joinLobbyFromInput() {
+        const input = document.getElementById('session-input').value.trim();
+        if (!input || isNaN(input) || +input <= 0) {
+            showError('lobby-status', 'Enter valid Session ID');
+            return;
+        }
+        joinLobby(+input);
+    }
+
+    function joinLobby(id) {
+        if (!token) {
+            alert('Login first');
+            return;
+        }
+        sessionId = id;
+        document.getElementById('current-session-id').textContent = sessionId;
+        document.getElementById('lobby').classList.remove('hidden');
+        document.getElementById('leave-btn').disabled = false;
+
+        ws = new WebSocket(`ws://localhost:8080/ws/game-sessions/join`);
+
+        ws.onopen = () => {
+            ws.send(JSON.stringify({ session_id: +sessionId }));
+            showSuccess('lobby-status', 'Connected to lobby');
+        };
+
+        ws.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                if (data.type === 'lobby_update') {
+                    updatePlayers(data.players);
+                } else if (data.error) {
+                    showError('lobby-status', data.error);
+                }
+            } catch (err) {
+                console.error('Invalid message:', e.data);
+            }
+        };
+
+        ws.onclose = () => {
+            showStatus('lobby-status', 'Disconnected', 'info');
+            document.getElementById('leave-btn').disabled = true;
+        };
+
+        ws.onerror = () => {
+            showError('lobby-status', 'Connection error');
+        };
+    }
+
+    // === ОБНОВЛЕНИЕ ИГРОКОВ ===
+    function updatePlayers(players) {
+        const ul = document.getElementById('players');
+        ul.innerHTML = '';
+        if (!players || players.length === 0) {
+            ul.innerHTML = '<li><em>No players yet...</em></li>';
+            return;
+        }
+        players.forEach(p => {
+            const li = document.createElement('li');
+            li.textContent = p.nickname + (p.is_host ? ' (Host)' : '');
+            ul.appendChild(li);
+        });
+    }
+
+    // === ВЫХОД ===
+    async function leaveLobby() {
+        if (!sessionId || !token) return;
+
+        await fetch(`${API_BASE}/ws/game-sessions/${sessionId}/players`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (ws) ws.close();
+        sessionId = null;
+        document.getElementById('lobby').classList.add('hidden');
+        showStatus('lobby-status', 'Left session', 'info');
+    }
+
+    // === ИНИЦИАЛИЗАЦИЯ ===
+    if (token) {
+        showSuccess('auth-status', 'Already logged in');
+        document.getElementById('create').classList.remove('hidden');
+    }
+</script>
+
+</body>
+</html>
