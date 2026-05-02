@@ -32,12 +32,15 @@ export default defineConfig(({ mode }) => {
         'http://localhost:8080'
     const apiPathPrefix =
         rootEnv.VITE_PUBLIC_API_PATH_PREFIX || rootEnv.PUBLIC_API_PATH_PREFIX || ''
+    const sameOriginNoApiPrefix =
+        rootEnv.VITE_SAME_ORIGIN_NO_API_PREFIX || rootEnv.PUBLIC_SAME_ORIGIN_NO_API_PREFIX || ''
 
     return {
         envDir: '..',
         define: {
             'import.meta.env.VITE_PUBLIC_BACKEND_ORIGIN': JSON.stringify(publicBackend.replace(/\/$/, '')),
             'import.meta.env.VITE_PUBLIC_API_PATH_PREFIX': JSON.stringify(apiPathPrefix.trim()),
+            'import.meta.env.VITE_SAME_ORIGIN_NO_API_PREFIX': JSON.stringify(sameOriginNoApiPrefix.trim()),
         },
         plugins: [react()],
         server: {

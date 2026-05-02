@@ -93,7 +93,10 @@
             if (!p.startsWith('/')) p = '/' + p;
             return p.replace(/\/$/, '');
         };
-        const apiPrefix = norm(extraPref) || pathFromUrl;
+        const explicit = norm(extraPref) || pathFromUrl;
+        const noInfer = window.__KAHOOT_SAME_ORIGIN_NO_API_PREFIX__ === true || window.__KAHOOT_SAME_ORIGIN_NO_API_PREFIX__ === '1';
+        const inferred = (!noInfer && !explicit && httpOrigin === window.location.origin) ? '/api' : '';
+        const apiPrefix = explicit || inferred;
         window.__KAHOOT_HTTP_ORIGIN__ = httpOrigin;
         window.__KAHOOT_API_BASE__ = (httpOrigin + apiPrefix).replace(/\/$/, '');
     })();

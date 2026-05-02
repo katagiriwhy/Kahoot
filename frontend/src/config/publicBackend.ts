@@ -23,7 +23,24 @@ const configured = (import.meta.env.VITE_PUBLIC_BACKEND_ORIGIN ?? "http://localh
 const { httpOrigin, apiPathFromUrl } = parseConfiguredBackend(configured);
 
 const envPrefix = normalizeApiPrefix(String(import.meta.env.VITE_PUBLIC_API_PATH_PREFIX ?? ""));
-const apiPrefix = envPrefix || apiPathFromUrl;
+const explicitPrefix = envPrefix || apiPathFromUrl;
+
+/** When page and API share the same origin (typical nginx: / → Vite, /api/ → Go) but prefix was not set, assume /api. */
+function inferredNginxApiPrefix(httpOrigin: string): string {
+    const disabled =
+        String(import.meta.env.VITE_SAME_ORIGIN_NO_API_PREFIX ?? "") === "1" ||
+        String(import.meta.env.VITE_SAME_ORIGIN_NO_API_PREFIX ?? "") === "true";
+    if (disabled || explicitPrefix) return "";
+    if (typeof window === "undefined") return "";
+    try {
+        if (httpOrigin === window.location.origin) return "/api";
+    } catch {
+        /* ignore */
+    }
+    return "";
+}
+
+const apiPrefix = explicitPrefix || inferredNginxApiPrefix(httpOrigin);
 
 /** Base URL for REST (axios). Includes path prefix when nginx mounts API under /api/. */
 export const publicBackendOrigin = `${httpOrigin}${apiPrefix}`.replace(/\/$/, "");
