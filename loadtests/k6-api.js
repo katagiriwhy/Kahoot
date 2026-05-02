@@ -2,7 +2,22 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 import { Trend } from "k6/metrics";
 
-const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
+/**
+ * BASE_URL — origin (e.g. http://localhost:8080 or https://kahoot-kroot.duckdns.org).
+ * API_PREFIX — path nginx adds before Go (e.g. /api). Same idea as PUBLIC_API_PATH_PREFIX on the SPA.
+ *
+ * Example behind nginx:
+ *   k6 run -e BASE_URL=https://kahoot-kroot.duckdns.org -e API_PREFIX=/api loadtests/k6-api.js
+ */
+function apiRoot() {
+  const base = (__ENV.BASE_URL || "http://localhost:8080").replace(/\/$/, "");
+  const prefix = (__ENV.API_PREFIX || "").trim();
+  if (!prefix) return base;
+  const p = prefix.startsWith("/") ? prefix : `/${prefix}`;
+  return `${base}${p}`.replace(/\/$/, "");
+}
+
+const API = apiRoot();
 
 const authLatency = new Trend("auth_latency", true);
 const quizzesLatency = new Trend("quizzes_latency", true);
@@ -49,10 +64,10 @@ function registerAndLogin() {
   const headers = { "Content-Type": "application/json" };
 
   // Registration may occasionally race on unique constraints under heavy load.
-  http.post(`${BASE_URL}/users/register`, registerPayload, { headers });
+  http.post(`${API}/users/register`, registerPayload, { headers });
 
   const loginPayload = JSON.stringify({ login, password });
-  const loginRes = http.post(`${BASE_URL}/users/login`, loginPayload, { headers });
+  const loginRes = http.post(`${API}/users/login`, loginPayload, { headers });
   authLatency.add(loginRes.timings.duration);
 
   const loginOk = check(loginRes, {
@@ -84,14 +99,14 @@ export default function () {
     },
   };
 
-  const quizzesRes = http.get(`${BASE_URL}/quizzes`, authHeaders);
+  const quizzesRes = http.get(`${API}/quizzes`, authHeaders);
   quizzesLatency.add(quizzesRes.timings.duration);
   check(quizzesRes, {
     "quizzes status is 200 or 404": (r) => r.status === 200 || r.status === 404,
   });
 
   // Invalid session id should return 400 and still reflect auth + routing health.
-  const sessionExistsRes = http.get(`${BASE_URL}/game-sessions/0/exists`, authHeaders);
+  const sessionExistsRes = http.get(`${API}/game-sessions/0/exists`, authHeaders);
   check(sessionExistsRes, {
     "exists endpoint responds": (r) => r.status >= 200 && r.status < 500,
   });

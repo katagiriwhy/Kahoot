@@ -273,9 +273,16 @@ k6 run loadtests/k6-api.js
 k6 run -e BASE_URL=http://localhost:8080 -e VUS=100 -e DURATION=5m loadtests/k6-api.js
 ```
 
+Если API за reverse proxy с префиксом `/api/` (как у nginx), укажите префикс отдельно:
+
+```bash
+k6 run -e BASE_URL=https://kahoot-kroot.duckdns.org -e API_PREFIX=/api loadtests/k6-api.js
+```
+
 Где:
 
-- `BASE_URL` — адрес backend
+- `BASE_URL` — схема и хост (и при необходимости порт) без завершающего слэша
+- `API_PREFIX` — префикс пути до Gin (например `/api`); для прямого доступа к порту 8080 не задаётся
 - `VUS` — количество виртуальных пользователей в основном сценарии
 - `DURATION` — длительность основного этапа нагрузки
 
