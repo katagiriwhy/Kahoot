@@ -73,12 +73,37 @@
 
 <script src="config/public-host.js"></script>
 <script>
-    const API_BASE = (typeof window.__KAHOOT_PUBLIC_BACKEND__ === 'string' ? window.__KAHOOT_PUBLIC_BACKEND__ : 'http://localhost:8080').replace(/\/$/, '');
+    (function () {
+        const raw = (typeof window.__KAHOOT_PUBLIC_BACKEND__ === 'string' && window.__KAHOOT_PUBLIC_BACKEND__) || 'http://localhost:8080';
+        const extraPref = (typeof window.__KAHOOT_API_PATH_PREFIX__ === 'string' && window.__KAHOOT_API_PATH_PREFIX__.trim()) || '';
+        let httpOrigin, pathFromUrl = '';
+        try {
+            const href = /^https?:\/\//i.test(raw) ? raw : 'http://' + raw;
+            const u = new URL(href);
+            httpOrigin = u.protocol + '//' + u.host;
+            let p = u.pathname.replace(/\/$/, '');
+            if (p === '/') p = '';
+            pathFromUrl = p;
+        } catch (e) {
+            httpOrigin = raw.replace(/\/$/, '');
+        }
+        const norm = function (p) {
+            if (!p) return '';
+            p = p.trim();
+            if (!p.startsWith('/')) p = '/' + p;
+            return p.replace(/\/$/, '');
+        };
+        const apiPrefix = norm(extraPref) || pathFromUrl;
+        window.__KAHOOT_HTTP_ORIGIN__ = httpOrigin;
+        window.__KAHOOT_API_BASE__ = (httpOrigin + apiPrefix).replace(/\/$/, '');
+    })();
+    const API_BASE = window.__KAHOOT_API_BASE__;
     function wsGameSessionsJoinURL(tok) {
-        const u = new URL(API_BASE);
-        u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
+        const o = window.__KAHOOT_HTTP_ORIGIN__;
+        const u = new URL(o);
+        const wsProto = u.protocol === 'https:' ? 'wss:' : 'ws:';
         const q = tok ? ('?token=' + encodeURIComponent(tok)) : '';
-        return u.origin + '/ws/game-sessions/join' + q;
+        return wsProto + '//' + u.host + '/ws/game-sessions/join' + q;
     }
     let token = localStorage.getItem('token');
     let ws = null;

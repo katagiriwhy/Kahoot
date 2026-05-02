@@ -30,11 +30,14 @@ export default defineConfig(({ mode }) => {
         rootEnv.VITE_PUBLIC_BACKEND_ORIGIN ||
         rootEnv.PUBLIC_BACKEND_ORIGIN ||
         'http://localhost:8080'
+    const apiPathPrefix =
+        rootEnv.VITE_PUBLIC_API_PATH_PREFIX || rootEnv.PUBLIC_API_PATH_PREFIX || ''
 
     return {
         envDir: '..',
         define: {
             'import.meta.env.VITE_PUBLIC_BACKEND_ORIGIN': JSON.stringify(publicBackend.replace(/\/$/, '')),
+            'import.meta.env.VITE_PUBLIC_API_PATH_PREFIX': JSON.stringify(apiPathPrefix.trim()),
         },
         plugins: [react()],
         server: {
