@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"backend/backend/internal/utils"
-	"backend/internal/config"
+	"backend/backend/internal/config"
 	"fmt"
 	"net/http"
 

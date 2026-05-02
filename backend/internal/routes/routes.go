@@ -3,7 +3,7 @@ package routes
 import (
 	"backend/backend/internal/controllers"
 	"backend/backend/internal/middleware"
-	"backend/internal/config"
+	"backend/backend/internal/config"
 	"log"
 	"net/http"
 
