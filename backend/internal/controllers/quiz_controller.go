@@ -112,11 +112,6 @@ func (q *QuizController) GetQuizzes(c *gin.Context) {
 		quizzes = append(quizzes, qz)
 	}
 
-	if len(quizzes) == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "quizzes not found"})
-		return
-	}
-
 	if err := rows.Err(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

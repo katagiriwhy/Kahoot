@@ -247,7 +247,7 @@ docker-compose up -d
 - регистрация пользователя `POST /users/register`
 - логин `POST /users/login`
 - чтение квизов `GET /quizzes`
-- проверка сессии `GET /game-sessions/0/exists`
+- проверка сессии `GET /game-sessions/1/exists` (валидный id; пустая БД → `exists: false` и 200)
 
 ## 1) Подготовка
 

@@ -102,13 +102,13 @@ export default function () {
   const quizzesRes = http.get(`${API}/quizzes`, authHeaders);
   quizzesLatency.add(quizzesRes.timings.duration);
   check(quizzesRes, {
-    "quizzes status is 200 or 404": (r) => r.status === 200 || r.status === 404,
+    "quizzes status is 200": (r) => r.status === 200,
   });
 
-  // Invalid session id should return 400 and still reflect auth + routing health.
-  const sessionExistsRes = http.get(`${API}/game-sessions/0/exists`, authHeaders);
+  // Valid positive id: 200 + exists true/false (0 is rejected with 400 and skews k6 http_req_failed).
+  const sessionExistsRes = http.get(`${API}/game-sessions/1/exists`, authHeaders);
   check(sessionExistsRes, {
-    "exists endpoint responds": (r) => r.status >= 200 && r.status < 500,
+    "exists status is 200": (r) => r.status === 200,
   });
 
   sleep(1);
